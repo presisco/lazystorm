@@ -1,6 +1,9 @@
 package com.presisco.lazystorm.topology
 
-import com.presisco.lazystorm.bolt.*
+import com.presisco.lazystorm.bolt.Constants
+import com.presisco.lazystorm.bolt.LazyBasicBolt
+import com.presisco.lazystorm.bolt.LazyTickBolt
+import com.presisco.lazystorm.bolt.MapRenameBolt
 import com.presisco.lazystorm.bolt.jdbc.BatchMapInsertJdbcBolt
 import com.presisco.lazystorm.bolt.jdbc.BatchMapReplaceJdbcBolt
 import com.presisco.lazystorm.bolt.jdbc.MapInsertJdbcBolt
@@ -118,7 +121,7 @@ class LazyTopoBuilder {
             val srcPos = if (config.containsKey("srcPos")) getInt("srcPos") else Constants.DATA_FIELD_POS
             val srcField = if (config.containsKey("srcField")) getString("srcField") else Constants.DATA_FIELD_NAME
             val bolt = when (itemClass) {
-                "KafkaKeySwitchBolt" -> KafkaKeySwitchBolt<Int, String>(getHashMap("key_to_stream"))
+            //"KafkaKeySwitchBolt" -> KafkaKeySwitchBolt<Int, String>(getHashMap("key_to_stream"))
                 "MapRenameBolt" -> MapRenameBolt(getHashMap("rename_map"))
             /*             Json              */
                 "Json2MapBolt" -> Json2MapBolt()
