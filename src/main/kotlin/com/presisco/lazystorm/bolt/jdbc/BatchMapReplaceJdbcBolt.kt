@@ -6,7 +6,7 @@ import org.apache.storm.topology.OutputFieldsDeclarer
 import org.slf4j.LoggerFactory
 import javax.sql.DataSource
 
-open class BatchMapInsertJdbcBolt(
+class BatchMapReplaceJdbcBolt(
         srcPos: Int = Constants.DATA_FIELD_POS,
         srcField: String = Constants.DATA_FIELD_NAME,
         dataSource: DataSource,
@@ -26,15 +26,15 @@ open class BatchMapInsertJdbcBolt(
         rollbackOnBatchFailure,
         ack,
         tickIntervalSec
-){
-    private val logger = LoggerFactory.getLogger(BatchMapInsertJdbcBolt::class.java)
+) {
+    private val logger = LoggerFactory.getLogger(BatchMapReplaceJdbcBolt::class.java)
 
     @Transient
     protected lateinit var mapJdbcClient: MapJdbcClient
 
     init {
         setOnBatchFullCallback { batch ->
-            mapJdbcClient.insert(tableName, batch)
+            mapJdbcClient.replace(tableName, batch)
         }
     }
 

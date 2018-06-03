@@ -1,5 +1,6 @@
 package com.presisco.lazystorm.bolt.jdbc
 
+import com.presisco.lazyjdbc.client.MapJdbcClient
 import org.apache.storm.task.TopologyContext
 import org.slf4j.LoggerFactory
 import javax.sql.DataSource
