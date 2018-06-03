@@ -1,16 +1,19 @@
 package com.presisco.lazystorm.bolt.jdbc
 
-import com.presisco.lazyjdbc.client.MapJdbcClient
 import org.apache.storm.task.TopologyContext
 import org.slf4j.LoggerFactory
 import javax.sql.DataSource
 
-abstract class MapJdbcBolt(
+abstract class MapJdbcBolt<out T>(
+        srcPos: Int,
+        srcField: String,
         dataSource: DataSource,
         tableName: String,
         queryTimeout: Int = 2,
         rollbackOnBatchFailure: Boolean = true
-) : BaseJdbcBolt(
+) : BaseJdbcBolt<T>(
+        srcPos,
+        srcField,
         dataSource,
         tableName,
         queryTimeout,

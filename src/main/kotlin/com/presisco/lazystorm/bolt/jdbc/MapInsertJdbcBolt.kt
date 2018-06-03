@@ -1,5 +1,6 @@
 package com.presisco.lazystorm.bolt.jdbc
 
+import com.presisco.lazystorm.bolt.Constants
 import org.apache.storm.topology.BasicOutputCollector
 import org.apache.storm.topology.FailedException
 import org.apache.storm.topology.OutputFieldsDeclarer
@@ -9,44 +10,29 @@ import java.sql.SQLException
 import javax.sql.DataSource
 
 class MapInsertJdbcBolt(
+        srcPos: Int = Constants.DATA_FIELD_POS,
+        srcField: String = Constants.DATA_FIELD_NAME,
         dataSource: DataSource,
         tableName: String,
         queryTimeout: Int = 2,
         rollbackOnBatchFailure: Boolean = true
-): MapJdbcBolt(
+) : MapJdbcBolt<Any>(
+        srcPos,
+        srcField,
         dataSource,
         tableName,
         queryTimeout,
         rollbackOnBatchFailure
 ) {
     private val logger = LoggerFactory.getLogger(MapInsertJdbcBolt::class.java)
-    private var srcPos: Int = 0
-    private var srcField: String = ""
-
-    fun setDataPosition(pos: Int){
-        srcPos = pos
-    }
-
-    fun setDataField(field: String){
-        srcField = field
-    }
-
-    fun getData(tuple: Tuple) = if (srcField != "")
-            tuple.getValueByField(srcField)
-        else if (srcPos >= 0)
-            tuple.getValue(srcPos)
-        else {
-            logger.debug("invalid src params! try getting from pos: 0")
-            tuple.getValue(0)
-        }
 
     override fun execute(tuple: Tuple, basicOutputCollector: BasicOutputCollector) {
-        val data = getData(tuple)
+        val data = getInput(tuple)
 
         try {
             when (data) {
-                is List<*> -> mapJdbcClient.insert(tableName, data as List<Map<String, Any?>>)
-                is Map<*, *> -> mapJdbcClient.insert(tableName, arrayListOf(data as Map<String, Any?>))
+                is List<*> -> mapJdbcClient.insert(tableName, data)
+                is Map<*, *> -> mapJdbcClient.insert(tableName, arrayListOf(data))
                 else -> throw FailedException("unsupported type of data: ${data::class.java.simpleName}")
             }
         }catch (e: SQLException){
@@ -54,7 +40,7 @@ class MapInsertJdbcBolt(
         }
     }
 
-    override fun declareOutputFields(outputFieldsDeclarer: OutputFieldsDeclarer) {
+    override fun declareOutputFields(declarer: OutputFieldsDeclarer) {
 
     }
 }
