@@ -1,6 +1,5 @@
 package com.presisco.lazystorm.bolt.jdbc
 
-import com.presisco.lazystorm.bolt.Constants
 import org.apache.storm.topology.BasicOutputCollector
 import org.apache.storm.topology.FailedException
 import org.apache.storm.topology.OutputFieldsDeclarer
@@ -10,15 +9,11 @@ import java.sql.SQLException
 import javax.sql.DataSource
 
 class MapInsertJdbcBolt(
-        srcPos: Int = Constants.DATA_FIELD_POS,
-        srcField: String = Constants.DATA_FIELD_NAME,
         dataSource: DataSource,
         tableName: String,
         queryTimeout: Int = 2,
         rollbackOnBatchFailure: Boolean = true
 ) : MapJdbcBolt<Any>(
-        srcPos,
-        srcField,
         dataSource,
         tableName,
         queryTimeout,

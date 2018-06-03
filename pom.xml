@@ -6,7 +6,7 @@
 
     <groupId>com.presisco</groupId>
     <artifactId>lazystorm</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <packaging>jar</packaging>
 
     <name>com.presisco.lazystorm</name>
@@ -23,7 +23,7 @@
         <dependency>
             <groupId>com.presisco</groupId>
             <artifactId>GsonHelper</artifactId>
-            <version>1.0.7</version>
+            <version>1.1.0</version>
         </dependency>
         <dependency>
             <groupId>com.presisco</groupId>
@@ -33,7 +33,7 @@
         <dependency>
             <groupId>com.presisco</groupId>
             <artifactId>toolbox</artifactId>
-            <version>1.0.2</version>
+            <version>1.0.4</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>

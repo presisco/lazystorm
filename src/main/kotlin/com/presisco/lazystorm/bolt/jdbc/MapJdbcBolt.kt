@@ -6,15 +6,11 @@ import org.slf4j.LoggerFactory
 import javax.sql.DataSource
 
 abstract class MapJdbcBolt<out T>(
-        srcPos: Int,
-        srcField: String,
         dataSource: DataSource,
         tableName: String,
         queryTimeout: Int = 2,
         rollbackOnBatchFailure: Boolean = true
 ) : BaseJdbcBolt<T>(
-        srcPos,
-        srcField,
         dataSource,
         tableName,
         queryTimeout,

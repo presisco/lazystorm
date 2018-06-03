@@ -1,20 +1,13 @@
 package com.presisco.lazystorm.bolt.jdbc
 
-import com.presisco.lazystorm.bolt.Constants
 import com.presisco.lazystorm.bolt.LazyTickBolt
-import jdk.nashorn.internal.runtime.ECMAErrors
-import org.apache.storm.Config
 import org.apache.storm.task.OutputCollector
 import org.apache.storm.task.TopologyContext
-import org.apache.storm.topology.base.BaseTickTupleAwareRichBolt
 import org.apache.storm.tuple.Tuple
-import java.sql.SQLException
 import java.util.concurrent.ArrayBlockingQueue
 import javax.sql.DataSource
 
 abstract class BatchJdbcBolt<E>(
-        srcPos: Int = Constants.DATA_FIELD_POS,
-        srcField: String = Constants.DATA_FIELD_NAME,
         protected val dataSource: DataSource,
         protected val tableName: String,
         protected val batchSize: Int = 1000,
@@ -22,7 +15,7 @@ abstract class BatchJdbcBolt<E>(
         protected val rollbackOnBatchFailure: Boolean = true,
         protected val ack: Boolean = true,
         tickIntervalSec: Int = 5
-) : LazyTickBolt<Any>(srcPos, srcField, tickIntervalSec) {
+) : LazyTickBolt<Any>(tickIntervalSec = tickIntervalSec) {
     protected lateinit var outputCollector: OutputCollector
 
     private lateinit var insertQueue: ArrayBlockingQueue<E>

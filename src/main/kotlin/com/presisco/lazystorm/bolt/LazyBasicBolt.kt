@@ -7,11 +7,21 @@ import org.apache.storm.tuple.Tuple
 import org.slf4j.LoggerFactory
 
 abstract class LazyBasicBolt<out T>(
-        private val srcPos: Int = Constants.DATA_FIELD_POS,
-        private val srcField: String = Constants.DATA_FIELD_NAME
+        private var srcPos: Int = Constants.DATA_FIELD_POS,
+        private var srcField: String = Constants.DATA_FIELD_NAME
 ) : BaseBasicBolt() {
     private val logger = LoggerFactory.getLogger(LazyBasicBolt::class.java)
 
+    fun setSrcPos(pos: Int): LazyBasicBolt<T> {
+        srcPos = pos
+        return this
+    }
+
+    fun setSrcField(field: String): LazyBasicBolt<T> {
+        srcField = field
+        return this
+    }
+    
     fun getInput(tuple: Tuple) = if (srcPos != Constants.DATA_FIELD_POS)
         tuple.getValue(srcPos) as T
     else
