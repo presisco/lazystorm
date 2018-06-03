@@ -9,7 +9,7 @@ import org.apache.storm.tuple.Tuple
 import org.apache.storm.tuple.Values
 import org.slf4j.LoggerFactory
 
-class KafkaKeySwitchBolt<K, V>(
+abstract class KafkaKeySwitchBolt<K, V>(
         private val kafkaKey2StreamIdMap: HashMap<K, String>
 ) : BaseBasicBolt() {
     private val logger = LoggerFactory.getLogger(KafkaKeySwitchBolt::class.java)
