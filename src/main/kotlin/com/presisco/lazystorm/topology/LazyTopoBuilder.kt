@@ -2,6 +2,9 @@ package com.presisco.lazystorm.topology
 
 import com.presisco.lazystorm.bolt.*
 import com.presisco.lazystorm.bolt.jdbc.BatchMapInsertJdbcBolt
+import com.presisco.lazystorm.bolt.jdbc.BatchMapReplaceJdbcBolt
+import com.presisco.lazystorm.bolt.jdbc.MapInsertJdbcBolt
+import com.presisco.lazystorm.bolt.jdbc.MapReplaceJdbcBolt
 import com.presisco.lazystorm.bolt.json.Json2ListBolt
 import com.presisco.lazystorm.bolt.json.Json2MapBolt
 import com.zaxxer.hikari.HikariConfig
@@ -129,6 +132,27 @@ class LazyTopoBuilder {
                         rollbackOnBatchFailure = getBoolean("rollback"),
                         ack = getBoolean("ack"),
                         tickIntervalSec = getInt("interval")
+                )
+                "BatchMapReplaceJdbcBolt" -> BatchMapReplaceJdbcBolt(
+                        dataSource = dataSourceMap[getString("data_source")]!!,
+                        tableName = getString("table"),
+                        batchSize = getInt("batch_size"),
+                        queryTimeout = getInt("timeout"),
+                        rollbackOnBatchFailure = getBoolean("rollback"),
+                        ack = getBoolean("ack"),
+                        tickIntervalSec = getInt("interval")
+                )
+                "MapInsertJdbcBolt" -> MapInsertJdbcBolt(
+                        dataSource = dataSourceMap[getString("data_source")]!!,
+                        tableName = getString("table"),
+                        queryTimeout = getInt("timeout"),
+                        rollbackOnBatchFailure = getBoolean("rollback")
+                )
+                "MapReplaceJdbcBolt" -> MapReplaceJdbcBolt(
+                        dataSource = dataSourceMap[getString("data_source")]!!,
+                        tableName = getString("table"),
+                        queryTimeout = getInt("timeout"),
+                        rollbackOnBatchFailure = getBoolean("rollback")
                 )
                 else -> null
             }
