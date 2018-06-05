@@ -16,7 +16,7 @@ abstract class BatchJdbcBolt<E> : LazyTickBolt<Any>() {
 
     protected lateinit var outputCollector: OutputCollector
 
-    private lateinit var insertQueue: ArrayBlockingQueue<E>
+    private lateinit var dataQueue: ArrayBlockingQueue<E>
     private lateinit var onBatchExecute: (batch: List<E>) -> Unit
 
     @Transient
@@ -69,11 +69,12 @@ abstract class BatchJdbcBolt<E> : LazyTickBolt<Any>() {
     }
 
     protected fun add2Batch(data: E) {
-        synchronized(insertQueue) {
-            insertQueue.put(data)
-            insertQueue
-            if (insertQueue.remainingCapacity() == 0) {
-                onBatchExecute(insertQueue.take(insertQueue.size))
+        synchronized(dataQueue) {
+            dataQueue.put(data)
+            dataQueue
+            if (dataQueue.remainingCapacity() == 0) {
+                logger.info("queue full! execute batch")
+                onBatchExecute(dataQueue.take(dataQueue.size))
             }
         }
     }
@@ -86,7 +87,7 @@ abstract class BatchJdbcBolt<E> : LazyTickBolt<Any>() {
 
     override fun prepare(stormConfig: MutableMap<*, *>, context: TopologyContext, outputCollector: OutputCollector) {
         this.outputCollector = outputCollector
-        insertQueue = ArrayBlockingQueue(batchSize)
+        dataQueue = ArrayBlockingQueue(batchSize)
         initializeHikariCP()
     }
 
@@ -106,10 +107,10 @@ abstract class BatchJdbcBolt<E> : LazyTickBolt<Any>() {
     }
 
     override fun onTickTuple(tuple: Tuple) {
-        synchronized(insertQueue) {
-            if (insertQueue.isNotEmpty()) {
+        synchronized(dataQueue) {
+            if (dataQueue.isNotEmpty()) {
                 try {
-                    onBatchExecute(insertQueue.take(insertQueue.size))
+                    onBatchExecute(dataQueue.take(dataQueue.size))
                 } catch (e: Exception) {
                     outputCollector.reportError(e)
                 }
