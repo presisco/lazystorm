@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory
 abstract class LazyTickBolt<out T>(
         private var srcPos: Int = Constants.DATA_FIELD_POS,
         private var srcField: String = Constants.DATA_FIELD_NAME,
-        private var tickIntervalSec: Int
+        private var tickIntervalSec: Int = 60
 ) : BaseTickTupleAwareRichBolt() {
     private val logger = LoggerFactory.getLogger(LazyTickBolt::class.java)
 
@@ -24,7 +24,7 @@ abstract class LazyTickBolt<out T>(
         return this
     }
 
-    fun setTickIntervalSec(intervalSec: Int): LazyTickBolt<T> {
+    open fun setTickIntervalSec(intervalSec: Int): LazyTickBolt<T> {
         tickIntervalSec = intervalSec
         return this
     }

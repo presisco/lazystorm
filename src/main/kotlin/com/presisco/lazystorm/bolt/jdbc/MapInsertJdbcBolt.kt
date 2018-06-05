@@ -6,19 +6,8 @@ import org.apache.storm.topology.OutputFieldsDeclarer
 import org.apache.storm.tuple.Tuple
 import org.slf4j.LoggerFactory
 import java.sql.SQLException
-import javax.sql.DataSource
 
-class MapInsertJdbcBolt(
-        dataSource: DataSource,
-        tableName: String,
-        queryTimeout: Int = 2,
-        rollbackOnBatchFailure: Boolean = true
-) : MapJdbcBolt<Any>(
-        dataSource,
-        tableName,
-        queryTimeout,
-        rollbackOnBatchFailure
-) {
+class MapInsertJdbcBolt : MapJdbcBolt<Any>() {
     private val logger = LoggerFactory.getLogger(MapInsertJdbcBolt::class.java)
 
     override fun execute(tuple: Tuple, basicOutputCollector: BasicOutputCollector) {
