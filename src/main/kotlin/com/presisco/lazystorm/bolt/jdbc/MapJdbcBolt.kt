@@ -12,6 +12,10 @@ abstract class MapJdbcBolt<T> : BaseJdbcBolt<T>() {
 
     override fun prepare(stormConf: MutableMap<Any?, Any?>, context: TopologyContext) {
         super.prepare(stormConf, context)
-        mapJdbcClient = MapJdbcClient(dataSource, queryTimeout, rollbackOnBatchFailure)
+        try {
+            mapJdbcClient = MapJdbcClient(dataSource, queryTimeout, rollbackOnBatchFailure)
+        } catch (e: Exception) {
+            throw IllegalStateException("get connection failed! message: ${e.message}, data source name: ${dataSourceHolder.name}, config: ${dataSourceHolder.config}")
+        }
     }
 }

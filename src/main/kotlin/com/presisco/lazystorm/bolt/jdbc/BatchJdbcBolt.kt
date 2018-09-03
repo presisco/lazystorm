@@ -1,7 +1,7 @@
 package com.presisco.lazystorm.bolt.jdbc
 
 import com.presisco.lazystorm.bolt.LazyTickBolt
-import com.presisco.lazystorm.datasouce.DataSourceManager
+import com.presisco.lazystorm.datasouce.DataSourceHolder
 import org.apache.storm.task.OutputCollector
 import org.apache.storm.task.TopologyContext
 import org.apache.storm.tuple.Tuple
@@ -20,15 +20,15 @@ abstract class BatchJdbcBolt<E> : LazyTickBolt<Any>() {
     @Transient
     protected lateinit var dataSource: DataSource
 
-    protected lateinit var dataSourceName: String
+    protected lateinit var dataSourceHolder: DataSourceHolder
     protected lateinit var tableName: String
     protected var queryTimeout: Int = 2
     protected var rollbackOnBatchFailure: Boolean = true
     protected var batchSize: Int = 1000
     protected var ack: Boolean = true
 
-    fun setDataSourceName(name: String): BatchJdbcBolt<E> {
-        dataSourceName = name
+    fun setDataSource(holder: DataSourceHolder): BatchJdbcBolt<E> {
+        dataSourceHolder = holder
         return this
     }
 
@@ -78,7 +78,7 @@ abstract class BatchJdbcBolt<E> : LazyTickBolt<Any>() {
     }
 
     private fun initializeHikariCP() {
-        dataSource = DataSourceManager.getDataSource(dataSourceName)
+        dataSource = dataSourceHolder.getDataSource()
     }
 
     override fun prepare(stormConfig: MutableMap<*, *>, context: TopologyContext, outputCollector: OutputCollector) {
