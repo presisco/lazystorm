@@ -13,7 +13,11 @@ abstract class BatchMapJdbcBolt : BatchJdbcBolt<Map<String, *>>() {
 
     override fun prepare(stormConfig: MutableMap<*, *>, context: TopologyContext, outputCollector: OutputCollector) {
         super.prepare(stormConfig, context, outputCollector)
-        mapJdbcClient = MapJdbcClient(dataSource, queryTimeout, rollbackOnBatchFailure)
+        try {
+            mapJdbcClient = MapJdbcClient(dataSource, queryTimeout, rollbackOnBatchFailure)
+        } catch (e: Exception) {
+            throw IllegalStateException("get connection failed! message: ${e.message}, data source name: ${dataSourceHolder.name}, config: ${dataSourceHolder.config}")
+        }
     }
 
 }
