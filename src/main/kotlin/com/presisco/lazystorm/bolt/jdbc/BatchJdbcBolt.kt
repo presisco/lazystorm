@@ -1,13 +1,11 @@
 package com.presisco.lazystorm.bolt.jdbc
 
 import com.presisco.lazystorm.bolt.LazyTickBolt
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
+import com.presisco.lazystorm.datasouce.DataSourceManager
 import org.apache.storm.task.OutputCollector
 import org.apache.storm.task.TopologyContext
 import org.apache.storm.tuple.Tuple
 import org.slf4j.LoggerFactory
-import java.util.*
 import java.util.concurrent.ArrayBlockingQueue
 import javax.sql.DataSource
 
@@ -22,15 +20,15 @@ abstract class BatchJdbcBolt<E> : LazyTickBolt<Any>() {
     @Transient
     protected lateinit var dataSource: DataSource
 
-    protected lateinit var dataSourceConfig: HashMap<String, String>
+    protected lateinit var dataSourceName: String
     protected lateinit var tableName: String
     protected var queryTimeout: Int = 2
     protected var rollbackOnBatchFailure: Boolean = true
     protected var batchSize: Int = 1000
     protected var ack: Boolean = true
 
-    fun setDataSourceConfig(config: HashMap<String, String>): BatchJdbcBolt<E> {
-        dataSourceConfig = config
+    fun setDataSourceName(name: String): BatchJdbcBolt<E> {
+        dataSourceName = name
         return this
     }
 
@@ -80,9 +78,7 @@ abstract class BatchJdbcBolt<E> : LazyTickBolt<Any>() {
     }
 
     private fun initializeHikariCP() {
-        val props = Properties()
-        props.putAll(dataSourceConfig)
-        dataSource = HikariDataSource(HikariConfig(props))
+        dataSource = DataSourceManager.getDataSource(dataSourceName)
     }
 
     override fun prepare(stormConfig: MutableMap<*, *>, context: TopologyContext, outputCollector: OutputCollector) {

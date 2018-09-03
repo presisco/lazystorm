@@ -10,6 +10,7 @@ import com.presisco.lazystorm.bolt.jdbc.MapInsertJdbcBolt
 import com.presisco.lazystorm.bolt.jdbc.MapReplaceJdbcBolt
 import com.presisco.lazystorm.bolt.json.Json2ListBolt
 import com.presisco.lazystorm.bolt.json.Json2MapBolt
+import com.presisco.lazystorm.datasouce.DataSourceManager
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.storm.generated.StormTopology
 import org.apache.storm.kafka.spout.KafkaSpout
@@ -18,7 +19,6 @@ import org.apache.storm.topology.*
 import org.apache.storm.tuple.Fields
 
 class LazyTopoBuilder {
-    private val dataSourceMap = HashMap<String, HashMap<String, String>>()
 
     private fun setGrouping(
             declarer: BoltDeclarer,
@@ -103,10 +103,7 @@ class LazyTopoBuilder {
     private fun <E> Map<String, *>.getList(key: String) = this.byType<List<E>>(key)
 
     fun loadDataSource(dataSourceConfig: Map<String, Map<String, String>>) {
-        dataSourceConfig.forEach { name, config ->
-            dataSourceMap[name] = HashMap()
-            config.forEach { key, value -> dataSourceMap[name]!![key] = value }
-        }
+        DataSourceManager.loadDataSourceConfig(dataSourceConfig)
     }
 
     fun createLazyBolt(name: String, config: Map<String, Any>): Any? {
@@ -122,7 +119,7 @@ class LazyTopoBuilder {
                 "Json2ListBolt" -> Json2ListBolt()
             /*             JDBC              */
                 "BatchMapInsertJdbcBolt" -> BatchMapInsertJdbcBolt()
-                        .setDataSourceConfig(dataSourceMap[getString("data_source")]!!)
+                        .setDataSourceName(getString("data_source"))
                         .setTableName(getString("table"))
                         .setQueryTimeout(getInt("timeout"))
                         .setRollbackOnFailure(getBoolean("rollback"))
@@ -130,7 +127,7 @@ class LazyTopoBuilder {
                         .setAck(getBoolean("ack"))
                         .setTickIntervalSec(getInt("interval"))
                 "BatchMapReplaceJdbcBolt" -> BatchMapReplaceJdbcBolt()
-                        .setDataSourceConfig(dataSourceMap[getString("data_source")]!!)
+                        .setDataSourceName(getString("data_source"))
                         .setTableName(getString("table"))
                         .setQueryTimeout(getInt("timeout"))
                         .setRollbackOnFailure(getBoolean("rollback"))
@@ -138,12 +135,12 @@ class LazyTopoBuilder {
                         .setAck(getBoolean("ack"))
                         .setTickIntervalSec(getInt("interval"))
                 "MapInsertJdbcBolt" -> MapInsertJdbcBolt()
-                        .setDataSourceConfig(dataSourceMap[getString("data_source")]!!)
+                        .setDataSourceName(getString("data_source"))
                         .setTableName(getString("table"))
                         .setQueryTimeout(getInt("timeout"))
                         .setRollbackOnFailure(getBoolean("rollback"))
                 "MapReplaceJdbcBolt" -> MapReplaceJdbcBolt()
-                        .setDataSourceConfig(dataSourceMap[getString("data_source")]!!)
+                        .setDataSourceName(getString("data_source"))
                         .setTableName(getString("table"))
                         .setQueryTimeout(getInt("timeout"))
                         .setRollbackOnFailure(getBoolean("rollback"))
