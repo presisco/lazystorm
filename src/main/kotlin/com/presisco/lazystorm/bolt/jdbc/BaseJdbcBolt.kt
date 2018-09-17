@@ -1,7 +1,8 @@
 package com.presisco.lazystorm.bolt.jdbc
 
 import com.presisco.lazystorm.bolt.LazyBasicBolt
-import com.presisco.lazystorm.datasouce.DataSourceHolder
+import com.presisco.lazystorm.connector.DataSourceLoader
+import com.presisco.lazystorm.connector.DataSourceManager
 import org.apache.storm.task.TopologyContext
 import org.slf4j.LoggerFactory
 import javax.sql.DataSource
@@ -12,13 +13,13 @@ abstract class BaseJdbcBolt<T> : LazyBasicBolt<T>() {
     @Transient
     protected lateinit var dataSource: DataSource
 
-    protected lateinit var dataSourceHolder: DataSourceHolder
+    protected lateinit var dataSourceLoader: DataSourceLoader
     protected lateinit var tableName: String
     protected var queryTimeout: Int = 2
     protected var rollbackOnBatchFailure: Boolean = true
 
-    fun setDataSource(holder: DataSourceHolder): BaseJdbcBolt<T> {
-        dataSourceHolder = holder
+    fun setDataSource(loader: DataSourceLoader): BaseJdbcBolt<T> {
+        dataSourceLoader = loader
         return this
     }
 
@@ -38,7 +39,7 @@ abstract class BaseJdbcBolt<T> : LazyBasicBolt<T>() {
     }
 
     private fun initializeHikariCP() {
-        dataSource = dataSourceHolder.getDataSource()
+        dataSource = DataSourceManager.getConnector(dataSourceLoader)
     }
 
     override fun prepare(stormConf: MutableMap<Any?, Any?>, context: TopologyContext) {

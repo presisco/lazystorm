@@ -16,7 +16,7 @@ abstract class BatchMapJdbcBolt : BatchJdbcBolt<Map<String, *>>() {
         try {
             mapJdbcClient = MapJdbcClient(dataSource, queryTimeout, rollbackOnBatchFailure)
         } catch (e: Exception) {
-            throw IllegalStateException("get connection failed! message: ${e.message}, data source name: ${dataSourceHolder.name}, config: ${dataSourceHolder.config}")
+            throw IllegalStateException("get connection failed! message: ${e.message}, data source name: ${dataSourceLoader.name}, config: ${dataSourceLoader.config}")
         }
     }
 
