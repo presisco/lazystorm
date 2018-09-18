@@ -6,7 +6,7 @@ abstract class ConnectorManager<CONNECTOR> {
 
     @Synchronized
     fun getConnector(loader: ConnectorLoader<CONNECTOR, *>): CONNECTOR {
-        if (connectors.containsKey(loader.name)) {
+        if (!connectors.containsKey(loader.name)) {
             connectors[loader.name] = loader.getConnector()
         }
         return connectors[loader.name]!!
