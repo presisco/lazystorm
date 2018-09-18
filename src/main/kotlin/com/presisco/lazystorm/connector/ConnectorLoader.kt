@@ -1,8 +1,9 @@
 package com.presisco.lazystorm.connector
 
+import java.io.Serializable
 import java.util.*
 
-abstract class ConnectorLoader<CONNECTOR, CONFIG_VALUE> {
+abstract class ConnectorLoader<CONNECTOR, CONFIG_VALUE> : Serializable {
     lateinit var name: String
     lateinit var config: HashMap<String, CONFIG_VALUE>
 

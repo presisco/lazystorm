@@ -1,9 +1,6 @@
 package com.presisco.lazystorm.topology
 
-import com.presisco.lazystorm.bolt.Constants
-import com.presisco.lazystorm.bolt.LazyBasicBolt
-import com.presisco.lazystorm.bolt.LazyTickBolt
-import com.presisco.lazystorm.bolt.MapRenameBolt
+import com.presisco.lazystorm.bolt.*
 import com.presisco.lazystorm.bolt.jdbc.BatchMapInsertJdbcBolt
 import com.presisco.lazystorm.bolt.jdbc.BatchMapReplaceJdbcBolt
 import com.presisco.lazystorm.bolt.jdbc.MapInsertJdbcBolt
@@ -154,6 +151,7 @@ class LazyTopoBuilder {
                         .setTableName(getString("table"))
                         .setQueryTimeout(getInt("timeout"))
                         .setRollbackOnFailure(getBoolean("rollback"))
+                "TupleConsoleDumpBolt" -> TupleConsoleDumpBolt()
                 else -> null
             }
             bolt ?: return null
