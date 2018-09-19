@@ -192,6 +192,12 @@ class LazyTopoBuilder {
             topoConfig.forEach { name, config ->
                 with(config) {
                     val type = getString("type")
+
+                    val validateUpstreamName = fun(upstreamName: String) {
+                        if (!topoConfig.containsKey(upstreamName))
+                            throw IllegalStateException("undefined upstream: $upstreamName for bolt: $name")
+                    }
+
                     when (type) {
                         "spout" -> {
                             val spout = createLazySpout(name, config) ?: createSpout(name, config)
@@ -222,9 +228,18 @@ class LazyTopoBuilder {
                                 listOf()
 
                             when (upstream) {
-                                is Map<*, *> -> upstream.map { (boltName, streamName) -> setGrouping(declarer, grouping, boltName as String, streamName as String, groupingParams) }
-                                is List<*> -> upstream.map { setGrouping(declarer, grouping, it as String, groupingParams) }
-                                is String -> setGrouping(declarer, grouping, upstream, groupingParams)
+                                is Map<*, *> -> upstream.forEach { (boltName, streamName) ->
+                                    validateUpstreamName(boltName as String)
+                                    setGrouping(declarer, grouping, boltName, streamName as String, groupingParams)
+                                }
+                                is List<*> -> upstream.forEach {
+                                    validateUpstreamName(it as String)
+                                    setGrouping(declarer, grouping, it, groupingParams)
+                                }
+                                is String -> {
+                                    validateUpstreamName(upstream)
+                                    setGrouping(declarer, grouping, upstream, groupingParams)
+                                }
                                 else -> throw java.lang.Exception("bad upstream definition! $upstream")
                             }
                         }
