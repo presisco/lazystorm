@@ -44,7 +44,7 @@
     },
     "insert_one": {
       "type": "bolt",
-      "class": "MapInsertJdbcBolt",
+      "class": "SimpleInsertBolt",
       "data_source": "mysql",
       "table": "one",
       "batch_size": 1000,
@@ -68,6 +68,17 @@
       "interval": 1,
       "upstream": "one",
       "grouping": "shuffle",
+      "parallelism": 1
+    },
+    "oracle_seq_tag_bolt": {
+      "type": "bolt",
+      "upstream": "kafkaSource",
+      "class": "OracleSeqTagBolt",
+      "data_source": "oracle",
+      "sequence": "sequence",
+      "tag": "id",
+      "timeout": 5,
+      "rollback": true,
       "parallelism": 1
     }
   }

@@ -1,23 +1,25 @@
 package com.presisco.lazystorm.topology
 
 import com.presisco.lazystorm.bolt.*
-import com.presisco.lazystorm.bolt.jdbc.BatchMapInsertJdbcBolt
-import com.presisco.lazystorm.bolt.jdbc.BatchMapReplaceJdbcBolt
-import com.presisco.lazystorm.bolt.jdbc.MapInsertJdbcBolt
-import com.presisco.lazystorm.bolt.jdbc.MapReplaceJdbcBolt
+import com.presisco.lazystorm.bolt.jdbc.*
 import com.presisco.lazystorm.bolt.json.Json2ListBolt
 import com.presisco.lazystorm.bolt.json.Json2MapBolt
+import com.presisco.lazystorm.bolt.kafka.LazyJsonMapper
 import com.presisco.lazystorm.connector.DataSourceLoader
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.storm.generated.StormTopology
+import org.apache.storm.kafka.bolt.KafkaBolt
+import org.apache.storm.kafka.bolt.selector.DefaultTopicSelector
 import org.apache.storm.kafka.spout.KafkaSpout
 import org.apache.storm.kafka.spout.KafkaSpoutConfig
 import org.apache.storm.topology.*
 import org.apache.storm.tuple.Fields
+import java.util.*
 
 class LazyTopoBuilder {
 
     private val dataSourceConfig = HashMap<String, HashMap<String, String>>()
+    private val dataSourceLoaders = HashMap<String, DataSourceLoader>()
 
     private fun setGrouping(
             declarer: BoltDeclarer,
@@ -42,10 +44,10 @@ class LazyTopoBuilder {
         with(declarer) {
             when (grouping) {
                 "fields" -> fieldsGrouping(boltName, Fields(paramList))
-            //"all" -> allGrouping(boltName)
-            //"global" -> globalGrouping(boltName)
+                //"all" -> allGrouping(boltName)
+                //"global" -> globalGrouping(boltName)
                 "none" -> noneGrouping(boltName)
-            //"direct" -> directGrouping(boltName)
+                //"direct" -> directGrouping(boltName)
                 "shuffle" -> shuffleGrouping(boltName)
                 else -> throw NoSuchFieldException("not supported grouping: $grouping")
             }
@@ -77,10 +79,10 @@ class LazyTopoBuilder {
         with(declarer) {
             when (grouping) {
                 "fields" -> fieldsGrouping(boltName, streamName, Fields(paramList))
-            //"all" -> allGrouping(boltName, streamName)
-            //"global" -> globalGrouping(boltName, streamName)
+                //"all" -> allGrouping(boltName, streamName)
+                //"global" -> globalGrouping(boltName, streamName)
                 "none" -> noneGrouping(boltName, streamName)
-            //"direct" -> directGrouping(boltName, streamName)
+                //"direct" -> directGrouping(boltName, streamName)
                 "shuffle" -> shuffleGrouping(boltName, streamName)
                 else -> throw NoSuchFieldException("not supported grouping: $grouping")
             }
@@ -107,26 +109,40 @@ class LazyTopoBuilder {
             config.forEach { key, value ->
                 dataSourceConfig[name]!![key] = value
             }
+            dataSourceLoaders[name] = DataSourceLoader().setConfig(name, dataSourceConfig[name]!!) as DataSourceLoader
         }
     }
 
+    fun getDataSourceLoader(name: String) = dataSourceLoaders[name]!!
+
     fun createLazyBolt(name: String, config: Map<String, Any>): Any? {
         with(config) {
-            val itemClass = getString("class")
+            val itemClass = getOrDefault("class", "unknown")
             val srcPos = if (config.containsKey("srcPos")) getInt("srcPos") else Constants.DATA_FIELD_POS
             val srcField = if (config.containsKey("srcField")) getString("srcField") else Constants.DATA_FIELD_NAME
 
-            val dataSourceLoader = fun() = DataSourceLoader().setConfig(getString("data_source"), dataSourceConfig[getString("data_source")]!!) as DataSourceLoader
-
             val bolt = when (itemClass) {
-            //"KafkaKeySwitchBolt" -> KafkaKeySwitchBolt<Int, String>(getHashMap("key_to_stream"))
+                /*             Edit              */
                 "MapRenameBolt" -> MapRenameBolt(getHashMap("rename_map"))
-            /*             Json              */
+                /*             Json              */
                 "Json2MapBolt" -> Json2MapBolt()
                 "Json2ListBolt" -> Json2ListBolt()
-            /*             JDBC              */
+                /*             Kafka             */
+                "LazyKafkaDumpBolt" -> {
+                    val props = Properties()
+                    props["bootstrap.servers"] = getString("brokers")
+                    props["acks"] = "1"
+                    props["key.serializer"] = "org.apache.kafka.common.serialization.StringSerializer"
+                    props["value.serializer"] = "org.apache.kafka.common.serialization.StringSerializer"
+                    val mapper = LazyJsonMapper()
+                    KafkaBolt<String, String>()
+                            .withProducerProperties(props)
+                            .withTopicSelector(DefaultTopicSelector(getString("topic")))
+                            .withTupleToKafkaMapper(mapper)
+                }
+                /*             JDBC              */
                 "BatchMapInsertJdbcBolt" -> BatchMapInsertJdbcBolt()
-                        .setDataSource(dataSourceLoader())
+                        .setDataSource(getDataSourceLoader(getString("data_source")))
                         .setTableName(getString("table"))
                         .setQueryTimeout(getInt("timeout"))
                         .setRollbackOnFailure(getBoolean("rollback"))
@@ -134,23 +150,31 @@ class LazyTopoBuilder {
                         .setAck(getBoolean("ack"))
                         .setTickIntervalSec(getInt("interval"))
                 "BatchMapReplaceJdbcBolt" -> BatchMapReplaceJdbcBolt()
-                        .setDataSource(dataSourceLoader())
+                        .setDataSource(getDataSourceLoader(getString("data_source")))
                         .setTableName(getString("table"))
                         .setQueryTimeout(getInt("timeout"))
                         .setRollbackOnFailure(getBoolean("rollback"))
                         .setBatchSize(getInt("batch_size"))
                         .setAck(getBoolean("ack"))
                         .setTickIntervalSec(getInt("interval"))
-                "MapInsertJdbcBolt" -> MapInsertJdbcBolt()
-                        .setDataSource(dataSourceLoader())
+                "SimpleInsertBolt", "MapInsertJdbcBolt" -> SimpleInsertBolt()
+                        .setEmitOnException(getBoolean("emit_on_failure"))
+                        .setDataSource(getDataSourceLoader(getString("data_source")))
                         .setTableName(getString("table"))
                         .setQueryTimeout(getInt("timeout"))
                         .setRollbackOnFailure(getBoolean("rollback"))
-                "MapReplaceJdbcBolt" -> MapReplaceJdbcBolt()
-                        .setDataSource(dataSourceLoader())
+                "SimpleReplaceBolt", "MapReplaceJdbcBolt" -> SimpleReplaceBolt()
+                        .setEmitOnException(getBoolean("emit_on_failure"))
+                        .setDataSource(getDataSourceLoader(getString("data_source")))
                         .setTableName(getString("table"))
                         .setQueryTimeout(getInt("timeout"))
                         .setRollbackOnFailure(getBoolean("rollback"))
+                "OracleSeqTagBolt" -> OracleSeqTagBolt(getString("sequence"), getString("tag"))
+                        .setEmitOnException(getBoolean("emit_on_failure"))
+                        .setDataSource(getDataSourceLoader(getString("data_source")))
+                        .setQueryTimeout(getInt("timeout"))
+                        .setRollbackOnFailure(getBoolean("rollback"))
+                /*         Debug        */
                 "TupleConsoleDumpBolt" -> TupleConsoleDumpBolt()
                 else -> null
             }
