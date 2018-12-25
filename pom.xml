@@ -39,7 +39,7 @@
         <dependency>
             <groupId>com.presisco</groupId>
             <artifactId>toolbox</artifactId>
-            <version>1.0.7</version>
+            <version>1.0.8</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
