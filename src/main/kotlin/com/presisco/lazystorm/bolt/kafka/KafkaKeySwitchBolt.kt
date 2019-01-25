@@ -1,5 +1,6 @@
-package com.presisco.lazystorm.bolt
+package com.presisco.lazystorm.bolt.kafka
 
+import com.presisco.lazystorm.bolt.Constants
 import org.apache.storm.topology.BasicOutputCollector
 import org.apache.storm.topology.FailedException
 import org.apache.storm.topology.OutputFieldsDeclarer

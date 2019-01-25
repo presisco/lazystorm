@@ -1,20 +1,10 @@
 package com.presisco.lazystorm.bolt.json
 
 import com.presisco.gsonhelper.FormattedListHelper
-import org.apache.storm.task.TopologyContext
+import com.presisco.gsonhelper.SimpleHelper
 
 open class FormattedJson2ListBolt(
-        private val formatDef: Map<String, Set<String>>
+        private val formatDef: HashMap<String, ArrayList<String>>
 ) : JsonParseBolt() {
-
-    @Transient
-    private lateinit var formattedListHelper: FormattedListHelper
-
-    init {
-        setParseFunc { formattedListHelper.fromJson(it) }
-    }
-
-    override fun prepare(stormConf: MutableMap<Any?, Any?>?, context: TopologyContext?) {
-        formattedListHelper = FormattedListHelper(formatDef)
-    }
+    override fun initHelper(): SimpleHelper<*> = FormattedListHelper(formatDef.mapValues { it.value.toSet() })
 }

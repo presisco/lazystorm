@@ -2,8 +2,11 @@ package com.presisco.lazystorm.topology
 
 import com.presisco.lazystorm.bolt.*
 import com.presisco.lazystorm.bolt.jdbc.*
+import com.presisco.lazystorm.bolt.json.FormattedJson2ListBolt
+import com.presisco.lazystorm.bolt.json.FormattedJson2MapBolt
 import com.presisco.lazystorm.bolt.json.Json2ListBolt
 import com.presisco.lazystorm.bolt.json.Json2MapBolt
+import com.presisco.lazystorm.bolt.kafka.KafkaKeySwitchBolt
 import com.presisco.lazystorm.bolt.kafka.LazyJsonMapper
 import com.presisco.lazystorm.connector.DataSourceLoader
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -15,6 +18,8 @@ import org.apache.storm.kafka.spout.KafkaSpoutConfig
 import org.apache.storm.topology.*
 import org.apache.storm.tuple.Fields
 import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 class LazyTopoBuilder {
 
@@ -99,9 +104,29 @@ class LazyTopoBuilder {
 
     private fun Map<String, *>.getBoolean(key: String) = this.byType<Boolean>(key)
 
+    private fun <K, V> Map<String, *>.getMap(key: String) = this.byType<Map<K, V>>(key)
+
     private fun <K, V> Map<String, *>.getHashMap(key: String) = this.byType<HashMap<K, V>>(key)
 
     private fun <E> Map<String, *>.getList(key: String) = this.byType<List<E>>(key)
+
+    private fun <K, V> Map<String, V>.mapKeyToHashMap(keyMap: (key: String) -> K): HashMap<K, V> {
+        val hashMap = hashMapOf<K, V>()
+        this.forEach { key, value -> hashMap[keyMap(key)] = value }
+        return hashMap
+    }
+
+    private fun <Old, New> Map<String, Old>.mapValueToHashMap(valueMap: (value: Old) -> New): HashMap<String, New> {
+        val hashMap = hashMapOf<String, New>()
+        this.forEach { key, value -> hashMap[key] = valueMap(value) }
+        return hashMap
+    }
+
+    private fun <T> collectionToArrayList(collection: Collection<T>): ArrayList<T> {
+        val arrayList = ArrayList<T>(collection.size)
+        arrayList.addAll(collection)
+        return arrayList
+    }
 
     fun loadDataSource(configs: Map<String, Map<String, String>>) {
         configs.forEach { name, config ->
@@ -123,11 +148,41 @@ class LazyTopoBuilder {
 
             val bolt = when (itemClass) {
                 /*             Edit              */
-                "MapRenameBolt" -> MapRenameBolt(getHashMap("rename_map"))
+                "MapRenameBolt" -> MapRenameBolt(getHashMap("rename"))
                 /*             Json              */
                 "Json2MapBolt" -> Json2MapBolt()
                 "Json2ListBolt" -> Json2ListBolt()
+                "FormattedJson2MapBolt" -> {
+                    val formatDefRaw = config["format"] as Map<String, Collection<String>>
+                    val converted = formatDefRaw.mapValueToHashMap { collectionToArrayList(it) }
+                    FormattedJson2MapBolt(converted)
+                }
+                "FormattedJson2ListBolt" -> {
+                    val formatDefRaw = config["format"] as Map<String, Collection<String>>
+                    val converted = formatDefRaw.mapValueToHashMap { collectionToArrayList(it) }
+                    FormattedJson2ListBolt(converted)
+                }
                 /*             Kafka             */
+                "KafkaKeySwitchBolt" -> {
+                    val keyType = getString("key_type")
+                    val valueType = getString("value_type")
+                    if (valueType !in setOf("string")) {
+                        throw IllegalStateException("unsupported value type: $valueType")
+                    }
+                    val keyStreamMap = getMap<String, String>("key_stream_map")
+                    val converted = when (keyType) {
+                        "int" -> keyStreamMap.mapKeyToHashMap { Integer.parseInt(it) }
+                        "short" -> keyStreamMap.mapKeyToHashMap { Integer.parseInt(it).toShort() }
+                        "string" -> keyStreamMap.mapKeyToHashMap { it }
+                        else -> throw IllegalStateException("unsupported key type: $keyType")
+                    }
+                    when (keyType) {
+                        "int" -> object : KafkaKeySwitchBolt<Int, String>(converted as HashMap<Int, String>) {}
+                        "short" -> object : KafkaKeySwitchBolt<Short, String>(converted as HashMap<Short, String>) {}
+                        "string" -> object : KafkaKeySwitchBolt<String, String>(converted as HashMap<String, String>) {}
+                        else -> throw IllegalStateException("unsupported key type: $keyType")
+                    }
+                }
                 "LazyKafkaDumpBolt" -> {
                     val props = Properties()
                     props["bootstrap.servers"] = getString("brokers")
@@ -224,7 +279,11 @@ class LazyTopoBuilder {
 
                     when (type) {
                         "spout" -> {
-                            val spout = createLazySpout(name, config) ?: createSpout(name, config)
+                            val spout: IRichSpout = try {
+                                createLazySpout(name, config) ?: createSpout(name, config)
+                            } catch (e: IllegalStateException) {
+                                throw IllegalStateException("config for spout: $name is wrong, ${e.message}")
+                            }
                             setSpout(
                                     name,
                                     spout,
@@ -232,7 +291,11 @@ class LazyTopoBuilder {
                             )
                         }
                         "bolt" -> {
-                            val bolt = createLazyBolt(name, config) ?: createBolt(name, config)
+                            val bolt: Any = try {
+                                createLazyBolt(name, config) ?: createBolt(name, config)
+                            } catch (e: IllegalStateException) {
+                                throw IllegalStateException("config for bolt: $name is wrong, ${e.message}")
+                            }
                             val declarer = when (bolt) {
                                 is IBasicBolt -> setBolt(name, bolt, config.getInt("parallelism"))
                                 is IRichBolt -> setBolt(name, bolt, config.getInt("parallelism"))
@@ -256,7 +319,7 @@ class LazyTopoBuilder {
                                     validateUpstreamName(boltName as String)
                                     setGrouping(declarer, grouping, boltName, streamName as String, groupingParams)
                                 }
-                                is List<*> -> upstream.forEach {
+                                is Collection<*> -> upstream.forEach {
                                     validateUpstreamName(it as String)
                                     setGrouping(declarer, grouping, it, groupingParams)
                                 }

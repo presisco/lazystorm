@@ -1,31 +1,32 @@
 package com.presisco.lazystorm.bolt.json
 
+import com.presisco.gsonhelper.SimpleHelper
 import com.presisco.lazystorm.bolt.LazyBasicBolt
+import org.apache.storm.task.TopologyContext
 import org.apache.storm.topology.BasicOutputCollector
 import org.apache.storm.topology.FailedException
 import org.apache.storm.tuple.Tuple
 import org.apache.storm.tuple.Values
 import org.slf4j.LoggerFactory
 
-open class JsonParseBolt() : LazyBasicBolt<String>() {
+abstract class JsonParseBolt : LazyBasicBolt<String>() {
     private val logger = LoggerFactory.getLogger(JsonParseBolt::class.java)
 
-    private lateinit var parse: (json: String) -> Any
+    @Transient
+    private lateinit var jsonHelper: SimpleHelper<*>
 
-    constructor(func: (json: String) -> Any) : this() {
-        parse = func
-    }
+    abstract fun initHelper(): SimpleHelper<*>
 
-    fun setParseFunc(func: (json: String) -> Any){
-        parse = func
+    override fun prepare(stormConf: MutableMap<Any?, Any?>?, context: TopologyContext?) {
+        super.prepare(stormConf, context)
+        jsonHelper = initHelper()
     }
 
     override fun execute(tuple: Tuple, outputCollector: BasicOutputCollector) {
-
         val json = getInput(tuple)
 
         try {
-            val parsed = parse(json)
+            val parsed = jsonHelper.fromJson(json)
             outputCollector.emit(Values(parsed))
         } catch (e: Exception) {
             logger.warn("parse exception: ${e.message}")

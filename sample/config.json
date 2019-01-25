@@ -8,11 +8,19 @@
       "dataSourceClassName": "com.mysql.cj.jdbc.MysqlDataSource",
       "dataSource.url": "jdbc:mysql://localhost:3306/lazy",
       "dataSource.user": "lazy",
-      "dataSource.password": "nopassword"
+      "dataSource.password": "nopassword",
+      "maximumPoolSize": "10"
+    },
+    "oracle": {
+      "dataSourceClassName": "oracle.jdbc.pool.OracleDataSource",
+      "dataSource.url": "jdbc:oracle:thin:@//localhost:1521/XE",
+      "dataSource.user": "lazy",
+      "dataSource.password": "nopassword",
+      "maximumPoolSize": "10"
     }
   },
   "topology": {
-    "kafkaSource": {
+    "kafka_spout": {
       "type": "spout",
       "class": "KafkaSpout",
       "brokers": "localhost:9092",
@@ -21,64 +29,125 @@
       "value.deserializer": "org.apache.kafka.common.serialization.StringDeserializer",
       "parallelism": 1
     },
-    "switch": {
+    "map_rename_bolt": {
+      "type": "bolt",
+      "class": "Json2MapBolt",
+      "rename": {
+        "name": "username",
+        "time": "timestamp"
+      },
+      "upstream": "kafka_key_switch_bolt",
+      "grouping": "shuffle",
+      "parallelism": 1
+    },
+    "json_2_map_bolt": {
+      "type": "bolt",
+      "class": "Json2MapBolt",
+      "upstream": {
+        "kafka_key_switch_bolt": "alarm"
+      },
+      "grouping": "shuffle",
+      "parallelism": 1
+    },
+    "json_2_list_bolt": {
+      "type": "bolt",
+      "class": "Json2ListBolt",
+      "upstream": [
+        "kafka_key_switch_bolt",
+        "json_2_map_bolt"
+      ],
+      "grouping": "shuffle",
+      "parallelism": 1
+    },
+    "formatted_json_2_map_bolt": {
+      "type": "bolt",
+      "class": "FormattedJson2MapBolt",
+      "model": "alarm",
+      "format": {
+        "string": [
+          "username",
+          "password"
+        ],
+        "int": [
+          "id"
+        ]
+      },
+      "upstream": "kafka_key_switch_bolt",
+      "grouping": "shuffle",
+      "parallelism": 1
+    },
+    "formatted_json_2_list_bolt": {
+      "type": "bolt",
+      "class": "FormattedJson2ListBolt",
+      "model": "alarm",
+      "format": {
+        "string": [
+          "username",
+          "password"
+        ],
+        "int": [
+          "id"
+        ]
+      },
+      "upstream": "kafka_key_switch_bolt",
+      "grouping": "shuffle",
+      "parallelism": 1
+    },
+    "kafka_key_switch_bolt": {
       "type": "bolt",
       "class": "KafkaKeySwitchBolt",
-      "upstream": "kafkaSource",
+      "upstream": "kafka_spout",
       "grouping": "shuffle",
       "parallelism": 1,
+      "key_type": "int",
+      "value_type": "string",
       "key_stream_map": {
         "1": "one",
         "2": "another"
       }
     },
-    "one": {
+    "lazy_kafka_dump_bolt": {
       "type": "bolt",
       "class": "Json2MapBolt",
-      "model": "alarm",
-      "upstream": {
-        "switch": "alarm"
-      },
+      "upstream": "kafka_key_switch_bolt",
+      "bootstrap.servers": "localhost:9092",
       "grouping": "shuffle",
       "parallelism": 1
     },
-    "insert_one": {
+    "simple_insert_bolt": {
       "type": "bolt",
       "class": "SimpleInsertBolt",
       "data_source": "mysql",
       "table": "one",
-      "batch_size": 1000,
       "timeout": 5,
       "rollback": true,
-      "ack": true,
-      "interval": 1,
-      "upstream": "one",
+      "emit_on_failure": false,
+      "upstream": "json_2_map_bolt",
       "grouping": "shuffle",
       "parallelism": 1
     },
-    "update_one": {
+    "simple_replace_bolt": {
       "type": "bolt",
-      "class": "MapReplaceJdbcBolt",
+      "class": "SimpleReplaceBolt",
       "data_source": "mysql",
       "table": "one",
       "timeout": 5,
       "rollback": true,
-      "batch_size": 1000,
-      "ack": true,
-      "interval": 1,
-      "upstream": "one",
+      "emit_on_failure": false,
+      "upstream": "json_2_map_bolt",
       "grouping": "shuffle",
       "parallelism": 1
     },
     "oracle_seq_tag_bolt": {
       "type": "bolt",
-      "upstream": "kafkaSource",
+      "upstream": "json_2_map_bolt",
       "class": "OracleSeqTagBolt",
       "data_source": "oracle",
       "sequence": "sequence",
       "tag": "id",
       "timeout": 5,
       "rollback": true,
+      "emit_on_failure": false,
       "parallelism": 1
     }
   }
