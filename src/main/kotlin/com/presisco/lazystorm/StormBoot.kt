@@ -14,12 +14,14 @@ open class StormBoot(
         private val createCustomBolt: (String, Map<String, Any?>) -> Any
         = { name, _ -> throw IllegalStateException("unsupported bolt name: $name") }
 ) {
+    private val builder = LazyTopoBuilder()
 
     fun buildTopology(config: Map<String, Any?>): StormTopology {
-        val builder = LazyTopoBuilder()
         builder.loadDataSource(config["data_source"] as Map<String, Map<String, String>>)
         return builder.buildTopology(config["topology"] as Map<String, Map<String, Any>>, createCustomSpout, createCustomBolt)
     }
+
+    fun getDataSourceLoader(name: String) = builder.getDataSourceLoader(name)
 
     fun localLaunch(config: Map<String, Any?>) {
         val topology = buildTopology(config)

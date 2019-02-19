@@ -17,6 +17,8 @@ abstract class Launch {
     fun String.getKey() = this.substringBefore('=')
     fun String.getValue() = this.substringAfter('=')
 
+    private lateinit var stormBoot: StormBoot
+
     /**
      * 解析命令行运行参数
      */
@@ -28,14 +30,16 @@ abstract class Launch {
         }
     }
 
+    fun getDataSourceLoader(name: String) = stormBoot.getDataSourceLoader(name)
+
     fun launch(args: Array<String>) {
         parseArgs(args)
 
+        stormBoot = StormBoot(createCustomSpout, createCustomBolt)
         val config = ConfigMapHelper().readConfigMap(cmdArgs["config"] as String)
-        val boot = StormBoot(createCustomSpout, createCustomBolt)
         when (cmdArgs["mode"]) {
-            "local" -> boot.localLaunch(config)
-            "cluster" -> boot.clusterUpload(config)
+            "local" -> stormBoot.localLaunch(config)
+            "cluster" -> stormBoot.clusterUpload(config)
             else -> throw IllegalStateException("unsupported launch mode: ${cmdArgs["mode"]}")
         }
     }
