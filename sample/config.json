@@ -114,6 +114,15 @@
       "grouping": "shuffle",
       "parallelism": 1
     },
+    "tuple_console_dump_bolt": {
+      "type": "bolt",
+      "class": "TupleConsoleDumpBolt",
+      "upstream": {
+        "kafka_key_switch_bolt": "alarm"
+      },
+      "grouping": "shuffle",
+      "parallelism": 1
+    },
     "simple_insert_bolt": {
       "type": "bolt",
       "class": "SimpleInsertBolt",
