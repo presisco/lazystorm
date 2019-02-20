@@ -108,9 +108,10 @@
     },
     "lazy_kafka_dump_bolt": {
       "type": "bolt",
-      "class": "Json2MapBolt",
+      "class": "LazyKafkaDumpBolt",
       "upstream": "kafka_key_switch_bolt",
       "bootstrap.servers": "localhost:9092",
+      "topic": "storm-dump",
       "grouping": "shuffle",
       "parallelism": 1
     },
