@@ -52,6 +52,8 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
             val duration = stopWatch.stop()
             outputCollector.emitStats(
                     hashMapOf(
+                            "database" to dataSourceLoader.name,
+                            "table" to tableName,
                             "duration" to duration,
                             "total" to data.size,
                             "failed" to result.size
