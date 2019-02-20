@@ -1,0 +1,27 @@
+{
+  "name": "lazy_storm",
+  "nimbus": "localhost",
+  "workers": 1,
+  "spout_max_pending": 100,
+  "lifetime_minute": 60,
+  "data_source": {
+  },
+  "topology": {
+    "kafka_spout": {
+      "type": "spout",
+      "class": "KafkaSpout",
+      "brokers": "localhost:9092",
+      "topic": "KAFKA_TEST",
+      "key.deserializer": "org.apache.kafka.common.serialization.StringDeserializer",
+      "value.deserializer": "org.apache.kafka.common.serialization.StringDeserializer",
+      "parallelism": 1
+    },
+    "tuple_console_dump_bolt": {
+      "type": "bolt",
+      "class": "TupleConsoleDumpBolt",
+      "upstream": "kafka_spout",
+      "grouping": "shuffle",
+      "parallelism": 1
+    }
+  }
+}

@@ -35,6 +35,10 @@ open class StormBoot(
         conf.setMaxTaskParallelism(1)
         val cluster = LocalCluster()
         cluster.submitTopology(name, conf, topology)
+
+        Thread.sleep((config["lifetime_minute"] as Double).toLong() * 60 * 1000)
+
+        cluster.shutdown()
     }
 
     fun clusterUpload(config: Map<String, Any?>) {
