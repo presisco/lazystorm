@@ -7,6 +7,10 @@ class OracleSeqTagBolt(
         private val tag: String
 ) : JdbcClientBolt<OracleMapJdbcClient>() {
 
+    init {
+        setTableName(sequence)
+    }
+
     override fun loadJdbcClient() = OracleMapJdbcClient(dataSource, queryTimeout, rollbackOnBatchFailure)
 
     override fun process(data: List<*>, client: OracleMapJdbcClient): List<*> {

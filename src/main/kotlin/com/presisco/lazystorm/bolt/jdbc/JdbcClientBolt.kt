@@ -7,7 +7,6 @@ import org.apache.storm.task.TopologyContext
 import org.apache.storm.topology.BasicOutputCollector
 import org.apache.storm.tuple.Tuple
 import org.slf4j.LoggerFactory
-import java.sql.SQLException
 
 abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
     private val logger = LoggerFactory.getLogger(JdbcClientBolt::class.java)
@@ -49,7 +48,7 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
             if (result.isNotEmpty()) {
                 outputCollector.emitData(result)
             }
-            val duration = stopWatch.stop()
+            val duration = stopWatch.currentDurationFromStart()
             outputCollector.emitStats(
                     hashMapOf(
                             "database" to dataSourceLoader.name,
@@ -60,9 +59,9 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
                     ),
                     Constants.getTimeStampString()
             )
-        } catch (e: SQLException) {
+        } catch (e: Exception) {
             if (emitOnException) {
-                val duration = stopWatch.stop()
+                val duration = stopWatch.currentDurationFromStart()
                 outputCollector.emitFailed(
                         getInput(tuple),
                         e.message.toString(),
