@@ -26,13 +26,9 @@ class MapRenameBolt(
     }
 
     override fun execute(tuple: Tuple, basicOutputCollector: BasicOutputCollector) {
-        val data = getInput(tuple)
+        val data = getArrayListInput(tuple)
 
-        when (data) {
-            is MutableMap<*, *> -> renameMap(data as MutableMap<String, Any?>)
-            is List<*> -> data.forEach { map -> renameMap(map as MutableMap<String, Any?>) }
-            else -> throw FailedException("unsupported type of data: ${data::class.java.simpleName}")
-        }
+        data.forEach { map -> renameMap(map as MutableMap<String, Any?>) }
 
         basicOutputCollector.emit(Values(data))
     }

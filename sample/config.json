@@ -19,6 +19,15 @@
       "maximumPoolSize": "10"
     }
   },
+  "redis": {
+    "singleton": {
+      "host": "localhost",
+      "port": "1521",
+      "password": "",
+      "timeout": "5",
+      "database": "db0"
+    }
+  },
   "topology": {
     "kafka_spout": {
       "type": "spout",
@@ -31,11 +40,22 @@
     },
     "map_rename_bolt": {
       "type": "bolt",
-      "class": "Json2MapBolt",
+      "class": "MapRenameBolt",
       "rename": {
         "name": "username",
         "time": "timestamp"
       },
+      "upstream": "kafka_key_switch_bolt",
+      "grouping": "shuffle",
+      "parallelism": 1
+    },
+    "map_strip_bolt": {
+      "type": "bolt",
+      "class": "MapStripBolt",
+      "strip": [
+        "name",
+        "age"
+      ],
       "upstream": "kafka_key_switch_bolt",
       "grouping": "shuffle",
       "parallelism": 1
@@ -110,7 +130,7 @@
       "type": "bolt",
       "class": "LazyKafkaDumpBolt",
       "upstream": "kafka_key_switch_bolt",
-      "bootstrap.servers": "localhost:9092",
+      "brokers": "localhost:9092",
       "topic": "storm-dump",
       "grouping": "shuffle",
       "parallelism": 1
@@ -158,6 +178,15 @@
       "timeout": 5,
       "rollback": true,
       "emit_on_failure": false,
+      "parallelism": 1
+    },
+    "jedis_map_list_to_hash_bolt": {
+      "type": "bolt",
+      "class": "JedisMapListToHashBolt",
+      "upstream": "json_2_map_bolt",
+      "redis": "singleton",
+      "key": "data",
+      "key_field": "id",
       "parallelism": 1
     }
   }

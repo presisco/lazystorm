@@ -11,7 +11,7 @@
       "type": "spout",
       "class": "KafkaSpout",
       "brokers": "localhost:9092",
-      "topic": "KAFKA_TEST",
+      "topic": "cnc_data",
       "key.deserializer": "org.apache.kafka.common.serialization.StringDeserializer",
       "value.deserializer": "org.apache.kafka.common.serialization.StringDeserializer",
       "parallelism": 1

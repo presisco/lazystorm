@@ -8,7 +8,9 @@ import com.presisco.lazystorm.bolt.json.Json2ListBolt
 import com.presisco.lazystorm.bolt.json.Json2MapBolt
 import com.presisco.lazystorm.bolt.kafka.KafkaKeySwitchBolt
 import com.presisco.lazystorm.bolt.kafka.LazyJsonMapper
+import com.presisco.lazystorm.bolt.redis.JedisMapListToHashBolt
 import com.presisco.lazystorm.connector.DataSourceLoader
+import com.presisco.lazystorm.connector.JedisPoolLoader
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.storm.generated.StormTopology
 import org.apache.storm.kafka.bolt.KafkaBolt
@@ -25,6 +27,9 @@ class LazyTopoBuilder {
 
     private val dataSourceConfig = HashMap<String, HashMap<String, String>>()
     private val dataSourceLoaders = HashMap<String, DataSourceLoader>()
+
+    private val jedisConfig = HashMap<String, HashMap<String, String>>()
+    private val jedisLoaders = HashMap<String, JedisPoolLoader>()
 
     private fun setGrouping(
             declarer: BoltDeclarer,
@@ -110,6 +115,8 @@ class LazyTopoBuilder {
 
     private fun <E> Map<String, *>.getList(key: String) = this.byType<List<E>>(key)
 
+    private fun <E> Map<String, *>.getArrayList(key: String) = this.byType<ArrayList<E>>(key)
+
     private fun <K, V> Map<String, V>.mapKeyToHashMap(keyMap: (key: String) -> K): HashMap<K, V> {
         val hashMap = hashMapOf<K, V>()
         this.forEach { key, value -> hashMap[keyMap(key)] = value }
@@ -140,6 +147,18 @@ class LazyTopoBuilder {
 
     fun getDataSourceLoader(name: String) = dataSourceLoaders[name]!!
 
+    fun loadRedisConfig(configs: Map<String, Map<String, String>>) {
+        configs.forEach { name, config ->
+            jedisConfig[name] = HashMap()
+            config.forEach { key, value ->
+                jedisConfig[name]!![key] = value
+            }
+            jedisLoaders[name] = JedisPoolLoader().setConfig(name, jedisConfig[name]!!) as JedisPoolLoader
+        }
+    }
+
+    fun getJedisPoolLoader(name: String) = jedisLoaders[name]!!
+
     fun createLazyBolt(name: String, config: Map<String, Any>): Any? {
         with(config) {
             val itemClass = getOrDefault("class", "unknown")
@@ -149,6 +168,7 @@ class LazyTopoBuilder {
             val bolt = when (itemClass) {
                 /*             Edit              */
                 "MapRenameBolt" -> MapRenameBolt(getHashMap("rename"))
+                "MapStripBolt" -> MapStripBolt(getArrayList("strip"))
                 /*             Json              */
                 "Json2MapBolt" -> Json2MapBolt()
                 "Json2ListBolt" -> Json2ListBolt()
@@ -229,6 +249,10 @@ class LazyTopoBuilder {
                         .setDataSource(getDataSourceLoader(getString("data_source")))
                         .setQueryTimeout(getInt("timeout"))
                         .setRollbackOnFailure(getBoolean("rollback"))
+                /*         Redis        */
+                "JedisMapListToHashBolt" -> JedisMapListToHashBolt(getString("key_field"))
+                        .setDataKey(getString("key"))
+                        .setJedisPoolLoader(getJedisPoolLoader(getString("redis")))
                 /*         Debug        */
                 "TupleConsoleDumpBolt" -> TupleConsoleDumpBolt()
                 else -> null

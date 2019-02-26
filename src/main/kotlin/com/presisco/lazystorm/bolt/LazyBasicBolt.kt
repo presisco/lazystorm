@@ -29,6 +29,19 @@ abstract class LazyBasicBolt<out T>(
     else
         tuple.getValueByField(srcField) as T
 
+    fun getArrayListInput(tuple: Tuple): ArrayList<out T> {
+        val fuzzy = if (srcPos != Constants.DATA_FIELD_POS)
+            tuple.getValue(srcPos)
+        else
+            tuple.getValueByField(srcField)
+
+        return if (fuzzy !is List<*>) {
+            arrayListOf(fuzzy as T)
+        } else {
+            fuzzy as ArrayList<T>
+        }
+    }
+
     protected fun BasicOutputCollector.emitData(data: Any) {
         this.emit(Values(data))
     }

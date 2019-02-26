@@ -9,11 +9,7 @@ open class FormatCheckBolt(
 ) : LazyBasicBolt<Any>() {
 
     override fun execute(tuple: Tuple, collector: BasicOutputCollector) {
-        var data = getInput(tuple)
-
-        if (data is Map<*, *>) {
-            data = listOf(data)
-        }
+        var data = getArrayListInput(tuple)
 
         val passed = arrayListOf<Map<String, *>>()
         val failed = arrayListOf<Map<String, *>>()

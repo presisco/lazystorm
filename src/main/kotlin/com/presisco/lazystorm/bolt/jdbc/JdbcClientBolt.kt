@@ -37,11 +37,7 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
         val stopWatch = StopWatch()
         stopWatch.start()
 
-        var data = getInput(tuple)
-
-        if (data !is List<*>) {
-            data = listOf(data)
-        }
+        val data = getArrayListInput(tuple)
 
         try {
             val result = process(data as List<*>, jdbcClient as CLIENT)
