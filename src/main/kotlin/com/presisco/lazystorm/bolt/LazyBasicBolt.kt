@@ -30,20 +30,17 @@ abstract class LazyBasicBolt<out T>(
         tuple.getValueByField(srcField) as T
 
     fun getArrayListInput(tuple: Tuple): ArrayList<out T> {
-        val fuzzy = if (srcPos != Constants.DATA_FIELD_POS)
-            tuple.getValue(srcPos)
-        else
-            tuple.getValueByField(srcField)
+        val fuzzy = getInput(tuple)
 
         return if (fuzzy !is List<*>) {
-            arrayListOf(fuzzy as T)
+            arrayListOf(fuzzy)
         } else {
             fuzzy as ArrayList<T>
         }
     }
 
     protected fun BasicOutputCollector.emitData(data: Any) {
-        this.emit(Values(data))
+        this.emit(Constants.DATA_STREAM_NAME, Values(data))
     }
 
     protected fun BasicOutputCollector.emitFailed(data: Any, msg: String, time: String) {
@@ -55,7 +52,8 @@ abstract class LazyBasicBolt<out T>(
     }
 
     override fun declareOutputFields(declarer: OutputFieldsDeclarer) {
-        declarer.declare(
+        declarer.declareStream(
+                Constants.DATA_STREAM_NAME,
                 Fields(Constants.DATA_FIELD_NAME))
         declarer.declareStream(
                 Constants.STATS_STREAM_NAME,

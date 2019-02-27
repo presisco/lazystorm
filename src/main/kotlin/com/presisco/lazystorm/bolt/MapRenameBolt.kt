@@ -6,6 +6,10 @@ import org.apache.storm.tuple.Tuple
 import org.apache.storm.tuple.Values
 import org.slf4j.LoggerFactory
 
+/**
+ * ！！！！！重要！！！！！
+ * 对数据做的修改一定要新建Map保存，否则会导致bolt之间的数据流问题
+ */
 class MapRenameBolt(
         private val renameMap: HashMap<String, String>
 ) : LazyBasicBolt<Any>() {
@@ -18,19 +22,24 @@ class MapRenameBolt(
         }
     }
 
-    private fun renameMap(map: MutableMap<String, Any?>) {
-        renameMap.forEach { original, renamed ->
-            map[renamed] = map[original]
-            map.remove(original)
+    private fun renameMap(map: MutableMap<String, Any?>): HashMap<String, Any?> {
+        val renamedMap = hashMapOf<String, Any?>()
+        map.forEach { key, value ->
+            if (renameMap.containsKey(key)) {
+                renamedMap[renameMap[key]!!] = value
+            } else {
+                renamedMap[key] = value
+            }
         }
+        return renamedMap
     }
 
     override fun execute(tuple: Tuple, basicOutputCollector: BasicOutputCollector) {
         val data = getArrayListInput(tuple)
 
-        data.forEach { map -> renameMap(map as MutableMap<String, Any?>) }
+        val renamedList = data.map { map -> renameMap(map as MutableMap<String, Any?>) }
 
-        basicOutputCollector.emit(Values(data))
+        basicOutputCollector.emit(Values(renamedList))
     }
 
 }

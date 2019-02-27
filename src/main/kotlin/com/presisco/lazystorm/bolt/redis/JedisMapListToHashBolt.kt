@@ -24,8 +24,6 @@ class JedisMapListToHashBolt(private val keyField: String) : JedisSingletonBolt<
     }
 
     override fun execute(tuple: Tuple, outputCollector: BasicOutputCollector) {
-        val sourceId = "received from ${tuple.sourceComponent}:${tuple.sourceStreamId}"
-        println(sourceId)
         val dataSet = getArrayListInput(tuple)
         val dataMap = hashMapOf<String, String>()
         dataSet.forEach {
