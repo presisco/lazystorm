@@ -1,15 +1,12 @@
 package com.presisco.lazystorm.bolt.json
 
+import com.presisco.lazystorm.test.LazyBoltTest
 import com.presisco.lazystorm.test.SimpleDataTuple
-import org.apache.storm.task.TopologyContext
-import org.apache.storm.topology.BasicOutputCollector
 import org.apache.storm.tuple.Values
 import org.junit.Before
 import org.junit.Test
-import org.mockito.Mockito
-import kotlin.test.expect
 
-class Json2MapBoltTest {
+class Json2MapBoltTest : LazyBoltTest() {
     private val jsonBolt = Json2MapBolt()
     private val inputTuple = SimpleDataTuple(listOf("data"), listOf("{name: \"james\", age: 16}"))
     private val outputValues = Values(mapOf(
@@ -19,17 +16,13 @@ class Json2MapBoltTest {
 
     @Before
     fun prepare() {
-        val context = Mockito.mock(TopologyContext::class.java)
-        jsonBolt.prepare(mutableMapOf(), context)
+        fakeEmptyPrepare(jsonBolt)
     }
 
     @Test
     fun jsonParseTest() {
-        val collector = Mockito.mock(BasicOutputCollector::class.java)
-        Mockito.`when`(collector.emit(Mockito.anyList())).thenAnswer {
-            expect(outputValues) { it.arguments[0] as Values }
-            return@thenAnswer listOf(-1)
-        }
+        val collector = fakeBasicOutputCollector()
         jsonBolt.execute(inputTuple, collector)
+        collector.verifyEmittedData(outputValues)
     }
 }

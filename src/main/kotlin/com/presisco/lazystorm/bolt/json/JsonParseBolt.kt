@@ -27,7 +27,7 @@ abstract class JsonParseBolt : LazyBasicBolt<String>() {
 
         try {
             val parsed = jsonHelper.fromJson(json)
-            outputCollector.emit(Values(parsed))
+            outputCollector.emitData(Values(parsed))
         } catch (e: Exception) {
             logger.warn("parse exception: ${e.message}")
             logger.warn("raw data: $json")

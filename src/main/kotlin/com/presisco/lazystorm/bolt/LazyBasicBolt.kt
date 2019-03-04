@@ -39,17 +39,11 @@ abstract class LazyBasicBolt<out T>(
         }
     }
 
-    protected fun BasicOutputCollector.emitData(data: Any) {
-        this.emit(Constants.DATA_STREAM_NAME, Values(data))
-    }
+    protected fun BasicOutputCollector.emitData(data: Any) = this.emit(Constants.DATA_STREAM_NAME, Values(data))
 
-    protected fun BasicOutputCollector.emitFailed(data: Any, msg: String, time: String) {
-        this.emit(Constants.FAILED_STREAM_NAME, Values(data, msg, time))
-    }
+    protected fun BasicOutputCollector.emitFailed(data: Any, msg: String, time: String) = this.emit(Constants.FAILED_STREAM_NAME, Values(data, msg, time))
 
-    protected fun BasicOutputCollector.emitStats(data: Any, time: String) {
-        this.emit(Constants.STATS_STREAM_NAME, Values(data, time))
-    }
+    protected fun BasicOutputCollector.emitStats(data: Any, time: String) = this.emit(Constants.STATS_STREAM_NAME, Values(data, time))
 
     override fun declareOutputFields(declarer: OutputFieldsDeclarer) {
         declarer.declareStream(
