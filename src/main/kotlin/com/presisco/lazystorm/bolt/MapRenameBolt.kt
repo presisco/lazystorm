@@ -1,9 +1,6 @@
 package com.presisco.lazystorm.bolt
 
-import org.apache.storm.topology.BasicOutputCollector
 import org.apache.storm.topology.FailedException
-import org.apache.storm.tuple.Tuple
-import org.apache.storm.tuple.Values
 import org.slf4j.LoggerFactory
 
 /**
@@ -12,7 +9,7 @@ import org.slf4j.LoggerFactory
  */
 class MapRenameBolt(
         private val renameMap: HashMap<String, String>
-) : LazyBasicBolt<Any>() {
+) : MapOpBolt() {
     private val logger = LoggerFactory.getLogger(MapRenameBolt::class.java)
 
     init {
@@ -22,9 +19,9 @@ class MapRenameBolt(
         }
     }
 
-    private fun renameMap(map: MutableMap<String, Any?>): HashMap<String, Any?> {
+    override fun operate(input: Map<String, *>): HashMap<String, *> {
         val renamedMap = hashMapOf<String, Any?>()
-        map.forEach { key, value ->
+        input.forEach { key, value ->
             if (renameMap.containsKey(key)) {
                 renamedMap[renameMap[key]!!] = value
             } else {
@@ -34,12 +31,5 @@ class MapRenameBolt(
         return renamedMap
     }
 
-    override fun execute(tuple: Tuple, basicOutputCollector: BasicOutputCollector) {
-        val data = getArrayListInput(tuple)
-
-        val renamedList = data.map { map -> renameMap(map as MutableMap<String, Any?>) }
-
-        basicOutputCollector.emit(Values(renamedList))
-    }
 
 }

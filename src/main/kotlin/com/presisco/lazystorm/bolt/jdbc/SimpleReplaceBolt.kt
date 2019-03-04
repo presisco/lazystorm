@@ -8,8 +8,8 @@ class SimpleReplaceBolt : JdbcClientBolt<MapJdbcClient>() {
 
     override fun loadJdbcClient() = MapJdbcClient(dataSource, queryTimeout, rollbackOnBatchFailure)
 
-    override fun process(data: List<*>, client: MapJdbcClient): List<*> {
-        val failedSet = client.replace(tableName, data as List<Map<String, Any?>>)
+    override fun process(data: List<*>, table: String, client: MapJdbcClient): List<*> {
+        val failedSet = client.replace(table, data as List<Map<String, Any?>>)
         return if (failedSet.isEmpty()) {
             listOf<Any>()
         } else {

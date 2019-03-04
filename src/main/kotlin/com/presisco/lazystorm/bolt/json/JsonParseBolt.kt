@@ -6,7 +6,6 @@ import org.apache.storm.task.TopologyContext
 import org.apache.storm.topology.BasicOutputCollector
 import org.apache.storm.topology.FailedException
 import org.apache.storm.tuple.Tuple
-import org.apache.storm.tuple.Values
 import org.slf4j.LoggerFactory
 
 abstract class JsonParseBolt : LazyBasicBolt<String>() {
@@ -24,10 +23,11 @@ abstract class JsonParseBolt : LazyBasicBolt<String>() {
 
     override fun execute(tuple: Tuple, outputCollector: BasicOutputCollector) {
         val json = getInput(tuple)
+        val srcStream = tuple.sourceStreamId
 
         try {
             val parsed = jsonHelper.fromJson(json)
-            outputCollector.emitData(Values(parsed))
+            outputCollector.emitDataToStreams(srcStream, parsed!!)
         } catch (e: Exception) {
             logger.warn("parse exception: ${e.message}")
             logger.warn("raw data: $json")

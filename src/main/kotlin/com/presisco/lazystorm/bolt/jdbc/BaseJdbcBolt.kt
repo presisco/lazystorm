@@ -14,7 +14,8 @@ abstract class BaseJdbcBolt<T> : LazyBasicBolt<T>() {
     protected lateinit var dataSource: DataSource
 
     protected lateinit var dataSourceLoader: DataSourceLoader
-    protected lateinit var tableName: String
+    protected var tableName: String? = null
+    protected var streamTableMap = hashMapOf<String, String>()
     protected var queryTimeout: Int = 2
     protected var rollbackOnBatchFailure: Boolean = true
 
@@ -26,6 +27,17 @@ abstract class BaseJdbcBolt<T> : LazyBasicBolt<T>() {
     fun setTableName(name: String): BaseJdbcBolt<T> {
         tableName = name
         return this
+    }
+
+    fun setStreamTableMap(map: HashMap<String, String>): BaseJdbcBolt<T> {
+        streamTableMap = map
+        return this
+    }
+
+    protected fun getTable(stream: String) = if (streamTableMap.containsKey(stream)) {
+        streamTableMap[stream]!!
+    } else {
+        tableName!!
     }
 
     fun setQueryTimeout(timeout: Int): BaseJdbcBolt<T> {

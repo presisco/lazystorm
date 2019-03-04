@@ -17,9 +17,9 @@ class JedisMapListToHashBolt(private val keyField: String) : JedisSingletonBolt<
         mapHelper = MapHelper()
     }
 
-    fun writeDataSet(dataMap: HashMap<String, String>) {
+    fun writeDataSet(key: String, dataMap: HashMap<String, String>) {
         val jedisCmd = getCommand()
-        jedisCmd.hmset(keyName, dataMap)
+        jedisCmd.hmset(key, dataMap)
         closeCommand(jedisCmd)
     }
 
@@ -30,6 +30,6 @@ class JedisMapListToHashBolt(private val keyField: String) : JedisSingletonBolt<
             val json = mapHelper.toJson(it)
             dataMap[it[keyField].toString()] = json
         }
-        writeDataSet(dataMap)
+        writeDataSet(getKey(tuple.sourceStreamId)!!, dataMap)
     }
 }

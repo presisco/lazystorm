@@ -14,7 +14,8 @@ abstract class JedisSingletonBolt<T> : LazyBasicBolt<T>() {
     private val logger = LoggerFactory.getLogger(JedisSingletonBolt::class.java)
 
     protected lateinit var jedisPoolLoader: JedisPoolLoader
-    protected lateinit var keyName: String
+    protected var keyName: String? = null
+    protected var streamKeyMap = hashMapOf<String, String>()
 
     @Transient
     protected lateinit var jedisPool: JedisPool
@@ -27,6 +28,17 @@ abstract class JedisSingletonBolt<T> : LazyBasicBolt<T>() {
     fun setDataKey(key: String): JedisSingletonBolt<T> {
         keyName = key
         return this
+    }
+
+    fun setStreamKeyMap(map: HashMap<String, String>): JedisSingletonBolt<T> {
+        streamKeyMap = map
+        return this
+    }
+
+    fun getKey(stream: String) = if (streamKeyMap.containsKey(stream)) {
+        streamKeyMap[stream]
+    } else {
+        keyName
     }
 
     override fun prepare(stormConf: MutableMap<*, *>, context: TopologyContext) {

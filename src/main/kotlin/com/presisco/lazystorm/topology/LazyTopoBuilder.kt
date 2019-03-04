@@ -31,6 +31,8 @@ class LazyTopoBuilder {
     private val jedisConfig = HashMap<String, HashMap<String, String>>()
     private val jedisLoaders = HashMap<String, JedisPoolLoader>()
 
+    private val streamDefs = HashMap<String, ArrayList<String>>()
+
     private fun setGrouping(
             declarer: BoltDeclarer,
             grouping: String,
@@ -233,22 +235,8 @@ class LazyTopoBuilder {
                         .setAck(getBoolean("ack"))
                         .setTickIntervalSec(getInt("interval"))
                 "SimpleInsertBolt", "MapInsertJdbcBolt" -> SimpleInsertBolt()
-                        .setEmitOnException(getBoolean("emit_on_failure"))
-                        .setDataSource(getDataSourceLoader(getString("data_source")))
-                        .setTableName(getString("table"))
-                        .setQueryTimeout(getInt("timeout"))
-                        .setRollbackOnFailure(getBoolean("rollback"))
                 "SimpleReplaceBolt", "MapReplaceJdbcBolt" -> SimpleReplaceBolt()
-                        .setEmitOnException(getBoolean("emit_on_failure"))
-                        .setDataSource(getDataSourceLoader(getString("data_source")))
-                        .setTableName(getString("table"))
-                        .setQueryTimeout(getInt("timeout"))
-                        .setRollbackOnFailure(getBoolean("rollback"))
-                "OracleSeqTagBolt" -> OracleSeqTagBolt(getString("sequence"), getString("tag"))
-                        .setEmitOnException(getBoolean("emit_on_failure"))
-                        .setDataSource(getDataSourceLoader(getString("data_source")))
-                        .setQueryTimeout(getInt("timeout"))
-                        .setRollbackOnFailure(getBoolean("rollback"))
+                "OracleSeqTagBolt" -> OracleSeqTagBolt(getString("tag"))
                 /*         Redis        */
                 "JedisMapListToHashBolt" -> JedisMapListToHashBolt(getString("key_field"))
                         .setDataKey(getString("key"))
@@ -261,6 +249,25 @@ class LazyTopoBuilder {
             when (bolt) {
                 is LazyBasicBolt<*> -> bolt.setSrcPos(srcPos).setSrcField(srcField)
                 is LazyTickBolt<*> -> bolt.setSrcPos(srcPos).setSrcField(srcField)
+            }
+            if (bolt is BaseJdbcBolt<*>) {
+                bolt.setDataSource(getDataSourceLoader(getString("data_source")))
+                        .setQueryTimeout(getInt("timeout"))
+                        .setRollbackOnFailure(getBoolean("rollback"))
+                if (bolt is JdbcClientBolt<*>) {
+                    bolt.setEmitOnException(getBoolean("emit_on_failure"))
+                }
+                val keyword = if (bolt is OracleSeqTagBolt) {
+                    "sequence"
+                } else {
+                    "table"
+                }
+
+                if (containsKey("stream_${keyword}_map")) {
+                    bolt.setStreamTableMap(getHashMap("stream_${keyword}_map"))
+                } else {
+                    bolt.setTableName(getString(keyword))
+                }
             }
             return bolt
         }
@@ -285,11 +292,32 @@ class LazyTopoBuilder {
         }
     }
 
+    fun scanStreams(topoConfig: Map<String, Map<String, Any>>) {
+        topoConfig.forEach { name, config ->
+            if (config.containsKey("streams")) {
+                streamDefs[name] = config.getArrayList("streams")
+            }
+        }
+    }
+
+    fun declareBolt(builder: TopologyBuilder, bolt: Any, name: String, parallelism: Int) = with(builder) {
+        when (bolt) {
+            is IBasicBolt -> setBolt(name, bolt, parallelism)
+            is IRichBolt -> setBolt(name, bolt, parallelism)
+            is IStatefulBolt<*> -> setBolt(name, bolt, parallelism)
+            is IWindowedBolt -> setBolt(name, bolt, parallelism)
+            is IStatefulWindowedBolt<*> -> setBolt(name, bolt, parallelism)
+            else -> throw IllegalStateException("unsupported bolt type: ${bolt::class.java.simpleName}")
+        }
+    }
+
     fun buildTopology(
             topoConfig: Map<String, Map<String, Any>>,
             createSpout: (name: String, config: Map<String, Any>) -> IRichSpout,
             createBolt: (name: String, config: Map<String, Any>) -> Any
     ): StormTopology {
+        scanStreams(topoConfig)
+
         val builder = TopologyBuilder()
         with(builder) {
             topoConfig.forEach { name, config ->
@@ -320,14 +348,7 @@ class LazyTopoBuilder {
                             } catch (e: IllegalStateException) {
                                 throw IllegalStateException("config for bolt: $name is wrong, ${e.message}")
                             }
-                            val declarer = when (bolt) {
-                                is IBasicBolt -> setBolt(name, bolt, config.getInt("parallelism"))
-                                is IRichBolt -> setBolt(name, bolt, config.getInt("parallelism"))
-                                is IStatefulBolt<*> -> setBolt(name, bolt, config.getInt("parallelism"))
-                                is IWindowedBolt -> setBolt(name, bolt, config.getInt("parallelism"))
-                                is IStatefulWindowedBolt<*> -> setBolt(name, bolt, config.getInt("parallelism"))
-                                else -> throw IllegalStateException("unsupported bolt type: ${bolt::class.java.simpleName}")
-                            }
+                            val declarer = declareBolt(builder, bolt, name, config.getInt("parallelism"))
 
                             val upstream = config["upstream"]
                                     ?: throw IllegalStateException("null upstream for bolt: $name")
@@ -337,6 +358,21 @@ class LazyTopoBuilder {
                                 getList<String>("group_params")
                             else
                                 listOf()
+
+                            if (bolt is LazyBasicBolt<*>) {
+                                if (containsKey("streams")) {
+                                    bolt.customDataStreams = getArrayList("streams")
+                                } else if (containsKey("keep_stream")
+                                        && getBoolean("keep_stream")
+                                ) {
+                                    if (upstream !is String) {
+                                        throw IllegalStateException("upstream mode for $name does not support keep_stream option")
+                                    }
+                                    streamDefs[upstream]
+                                            ?: throw IllegalStateException("upstream $upstream for $name does not define output streams")
+                                    bolt.customDataStreams = streamDefs[upstream]!!
+                                }
+                            }
 
                             when (upstream) {
                                 is Map<*, *> -> upstream.forEach { (boltName, streamName) ->

@@ -14,6 +14,8 @@ abstract class LazyBasicBolt<out T>(
 ) : BaseBasicBolt() {
     private val logger = LoggerFactory.getLogger(LazyBasicBolt::class.java)
 
+    var customDataStreams = ArrayList<String>()
+
     fun setSrcPos(pos: Int): LazyBasicBolt<T> {
         srcPos = pos
         return this
@@ -45,6 +47,12 @@ abstract class LazyBasicBolt<out T>(
 
     protected fun BasicOutputCollector.emitStats(data: Any, time: String) = this.emit(Constants.STATS_STREAM_NAME, Values(data, time))
 
+    protected fun BasicOutputCollector.emitDataToStreams(sourceStream: String, data: Any) = if (sourceStream in customDataStreams) {
+        this.emit(sourceStream, Values(data))
+    } else {
+        this.emitData(data)
+    }
+
     override fun declareOutputFields(declarer: OutputFieldsDeclarer) {
         declarer.declareStream(
                 Constants.DATA_STREAM_NAME,
@@ -64,5 +72,14 @@ abstract class LazyBasicBolt<out T>(
                         Constants.FAILED_TIME
                 )
         )
+        customDataStreams.filter {
+            it !in setOf(
+                    Constants.DATA_STREAM_NAME,
+                    Constants.STATS_STREAM_NAME,
+                    Constants.FAILED_STREAM_NAME
+            )
+        }.forEach {
+            declarer.declareStream(it, Fields(Constants.DATA_FIELD_NAME))
+        }
     }
 }

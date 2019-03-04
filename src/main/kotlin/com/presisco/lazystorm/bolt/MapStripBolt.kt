@@ -1,23 +1,22 @@
 package com.presisco.lazystorm.bolt
 
-import org.apache.storm.topology.BasicOutputCollector
-import org.apache.storm.tuple.Tuple
-import org.apache.storm.tuple.Values
 import org.slf4j.LoggerFactory
 
 class MapStripBolt(
         private val stripList: ArrayList<String>
-) : LazyBasicBolt<Any>() {
+) : MapOpBolt() {
     private val logger = LoggerFactory.getLogger(MapRenameBolt::class.java)
 
-    private fun stripMap(map: MutableMap<String, Any?>) = stripList.forEach { map.remove(it) }
+    override fun operate(input: Map<String, *>): HashMap<String, *> {
+        val output = hashMapOf<String, Any?>()
 
-    override fun execute(tuple: Tuple, basicOutputCollector: BasicOutputCollector) {
-        val data = getArrayListInput(tuple)
+        input.forEach { key, value ->
+            if (key !in stripList) {
+                output[key] = value
+            }
+        }
 
-        data.forEach { map -> stripMap(map as MutableMap<String, Any?>) }
-
-        basicOutputCollector.emit(Values(data))
+        return output
     }
 
 }

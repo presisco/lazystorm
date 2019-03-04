@@ -17,7 +17,7 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
 
     abstract fun loadJdbcClient(): BaseJdbcClient<*>
 
-    abstract fun process(data: List<*>, client: CLIENT): List<*>
+    abstract fun process(data: List<*>, table: String, client: CLIENT): List<*>
 
     fun setEmitOnException(flag: Boolean): JdbcClientBolt<CLIENT> {
         emitOnException = flag
@@ -38,17 +38,19 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
         stopWatch.start()
 
         val data = getArrayListInput(tuple)
+        val stream = tuple.sourceStreamId
+        val table = getTable(stream)
 
         try {
-            val result = process(data as List<*>, jdbcClient as CLIENT)
+            val result = process(data as List<*>, table, jdbcClient as CLIENT)
             if (result.isNotEmpty()) {
-                outputCollector.emitData(result)
+                outputCollector.emitDataToStreams(stream, result)
             }
             val duration = stopWatch.currentDurationFromStart()
             outputCollector.emitStats(
                     hashMapOf(
                             "database" to dataSourceLoader.name,
-                            "table" to tableName,
+                            "table" to table,
                             "duration" to duration,
                             "total" to data.size,
                             "failed" to result.size
@@ -66,7 +68,7 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
                 outputCollector.emitStats(
                         hashMapOf(
                                 "database" to dataSourceLoader.name,
-                                "table" to tableName,
+                                "table" to table,
                                 "duration" to duration,
                                 "total" to (data as List<*>).size,
                                 "failed" to data.size

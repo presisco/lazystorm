@@ -8,8 +8,8 @@ class SimpleInsertBolt : JdbcClientBolt<MapJdbcClient>() {
 
     override fun loadJdbcClient() = MapJdbcClient(dataSource, queryTimeout, rollbackOnBatchFailure)
 
-    override fun process(data: List<*>, client: MapJdbcClient): List<*> {
-        val failedSet = client.insert(tableName, data as List<Map<String, Any?>>)
+    override fun process(data: List<*>, table: String, client: MapJdbcClient): List<*> {
+        val failedSet = client.insert(table, data as List<Map<String, Any?>>)
         return if (failedSet.isEmpty()) {
             listOf<Any>()
         } else {

@@ -57,15 +57,18 @@
         "age"
       ],
       "upstream": "kafka_key_switch_bolt",
+      "keep_stream": true,
       "grouping": "shuffle",
       "parallelism": 1
     },
     "json_2_map_bolt": {
       "type": "bolt",
       "class": "Json2MapBolt",
-      "upstream": {
-        "kafka_key_switch_bolt": "alarm"
-      },
+      "upstream": "kafka_key_switch_bolt",
+      "streams": [
+        "one",
+        "another"
+      ],
       "grouping": "shuffle",
       "parallelism": 1
     },
@@ -124,7 +127,11 @@
       "key_stream_map": {
         "1": "one",
         "2": "another"
-      }
+      },
+      "streams": [
+        "one",
+        "another"
+      ]
     },
     "lazy_kafka_dump_bolt": {
       "type": "bolt",
@@ -148,11 +155,14 @@
       "type": "bolt",
       "class": "SimpleInsertBolt",
       "data_source": "mysql",
-      "table": "one",
       "timeout": 5,
       "rollback": true,
       "emit_on_failure": false,
       "upstream": "json_2_map_bolt",
+      "stream_table_map": {
+        "one": "one",
+        "another": "another"
+      },
       "grouping": "shuffle",
       "parallelism": 1
     },
@@ -173,8 +183,12 @@
       "upstream": "json_2_map_bolt",
       "class": "OracleSeqTagBolt",
       "data_source": "oracle",
-      "sequence": "sequence",
       "tag": "id",
+      "stream_sequence_map": {
+        "one": "one",
+        "another": "another"
+      },
+      "keep_stream": true,
       "timeout": 5,
       "rollback": true,
       "emit_on_failure": false,
