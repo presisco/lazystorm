@@ -60,11 +60,18 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
         } catch (e: Exception) {
             if (emitOnException) {
                 val duration = stopWatch.currentDurationFromStart()
-                outputCollector.emitFailed(
-                        getInput(tuple),
-                        e.message.toString(),
-                        Constants.getTimeStampString()
-                )
+                if (customDataStreams.isNotEmpty()) {
+                    outputCollector.emitDataToStreams(
+                            stream,
+                            data
+                    )
+                } else {
+                    outputCollector.emitFailed(
+                            data,
+                            e.message.toString(),
+                            Constants.getTimeStampString()
+                    )
+                }
                 outputCollector.emitStats(
                         hashMapOf(
                                 "database" to dataSourceLoader.name,
