@@ -199,7 +199,10 @@
       "class": "JedisMapListToHashBolt",
       "upstream": "json_2_map_bolt",
       "redis": "singleton",
-      "key": "data",
+      "stream_key_map": {
+        "one": "one",
+        "another": "another"
+      },
       "key_field": "id",
       "parallelism": 1
     }

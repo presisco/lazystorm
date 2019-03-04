@@ -238,9 +238,18 @@ class LazyTopoBuilder {
                 "SimpleReplaceBolt", "MapReplaceJdbcBolt" -> SimpleReplaceBolt()
                 "OracleSeqTagBolt" -> OracleSeqTagBolt(getString("tag"))
                 /*         Redis        */
-                "JedisMapListToHashBolt" -> JedisMapListToHashBolt(getString("key_field"))
-                        .setDataKey(getString("key"))
-                        .setJedisPoolLoader(getJedisPoolLoader(getString("redis")))
+                "JedisMapListToHashBolt" -> {
+                    val jedisBolt = JedisMapListToHashBolt(getString("key_field"))
+                            .setJedisPoolLoader(getJedisPoolLoader(getString("redis")))
+
+                    if (containsKey("stream_key_map")) {
+                        jedisBolt.setStreamKeyMap(getHashMap("stream_key_map"))
+                    } else {
+                        jedisBolt.setStreamKeyMap(getHashMap("key"))
+                    }
+
+                    jedisBolt
+                }
                 /*         Debug        */
                 "TupleConsoleDumpBolt" -> TupleConsoleDumpBolt()
                 else -> null
@@ -293,10 +302,24 @@ class LazyTopoBuilder {
     }
 
     fun scanStreams(topoConfig: Map<String, Map<String, Any>>) {
-        topoConfig.forEach { name, config ->
-            if (config.containsKey("streams")) {
-                streamDefs[name] = config.getArrayList("streams")
+        val unsolvedSet = hashSetOf<String>()
+        unsolvedSet.addAll(topoConfig.filterValues { it.getString("type") == "bolt" }.keys)
+        val defined = unsolvedSet.filter { topoConfig[it]!!.containsKey("streams") }
+        defined.forEach { streamDefs[it] = topoConfig[it]!!.getArrayList("streams") }
+        unsolvedSet.removeAll(defined)
+
+        while (unsolvedSet.isNotEmpty()) {
+            val solvable = unsolvedSet.filter {
+                topoConfig[it]!!.containsKey("keep_stream")
+                        && topoConfig[it]!!.getBoolean("keep_stream")
+                        && streamDefs.containsKey(topoConfig[it]!!.getString("upstream"))
             }
+
+            if (solvable.isEmpty())
+                break
+
+            solvable.forEach { streamDefs[it] = streamDefs[topoConfig[it]!!.getString("upstream")]!! }
+            unsolvedSet.removeAll(solvable)
         }
     }
 
@@ -368,9 +391,9 @@ class LazyTopoBuilder {
                                     if (upstream !is String) {
                                         throw IllegalStateException("upstream mode for $name does not support keep_stream option")
                                     }
-                                    streamDefs[upstream]
+                                    streamDefs[name]
                                             ?: throw IllegalStateException("upstream $upstream for $name does not define output streams")
-                                    bolt.customDataStreams = streamDefs[upstream]!!
+                                    bolt.customDataStreams = streamDefs[name]!!
                                 }
                             }
 
@@ -385,7 +408,13 @@ class LazyTopoBuilder {
                                 }
                                 is String -> {
                                     validateUpstreamName(upstream)
-                                    setGrouping(declarer, grouping, upstream, groupingParams)
+                                    if (bolt is LazyBasicBolt<*> && streamDefs.containsKey(upstream)) {
+                                        streamDefs[upstream]!!.forEach {
+                                            setGrouping(declarer, grouping, upstream, it, groupingParams)
+                                        }
+                                    } else {
+                                        setGrouping(declarer, grouping, upstream, groupingParams)
+                                    }
                                 }
                                 else -> throw java.lang.Exception("bad upstream definition! $upstream")
                             }
