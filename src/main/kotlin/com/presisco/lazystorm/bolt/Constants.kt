@@ -12,8 +12,8 @@ object Constants {
 
     const val FAILED_STREAM_NAME = "failed"
     const val FAILED_MESSAGE_FIELD = "msg"
-    const val FAILED_TIME = "time"
+    const val FAILED_TIME = "timestamp"
 
     const val STATS_STREAM_NAME = "stats"
-    const val STATS_TIME = "time"
+    const val STATS_TIME = "timestamp"
 }
