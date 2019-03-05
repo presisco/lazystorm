@@ -5,7 +5,10 @@ import org.apache.storm.tuple.Tuple
 
 open class SimpleDataTuple(
         private val keys: List<String>,
-        private val values: List<Any>
+        private val values: List<Any>,
+        private val component: String = "unknown",
+        private val stream: String = "default",
+        private val task: Int = 1
 ) : Tuple {
     private val dataMap = HashMap<String, Any>()
 
@@ -37,7 +40,7 @@ open class SimpleDataTuple(
 
     override fun getSourceGlobalStreamId() = null
 
-    override fun getSourceComponent() = null
+    override fun getSourceComponent() = component
 
     override fun size() = keys.size
 
@@ -59,7 +62,7 @@ open class SimpleDataTuple(
 
     override fun getInteger(index: Int) = values[index] as Int
 
-    override fun getSourceTask() = -1
+    override fun getSourceTask() = task
 
     override fun getBinary(index: Int) = values[index] as ByteArray
 
@@ -73,7 +76,7 @@ open class SimpleDataTuple(
 
     override fun getValues() = values
 
-    override fun getSourceStreamId() = null
+    override fun getSourceStreamId() = stream
 
     override fun getShort(index: Int) = values[index] as Short
 
