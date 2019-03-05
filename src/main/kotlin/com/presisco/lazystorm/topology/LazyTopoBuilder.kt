@@ -9,6 +9,8 @@ import com.presisco.lazystorm.bolt.json.Json2MapBolt
 import com.presisco.lazystorm.bolt.kafka.KafkaKeySwitchBolt
 import com.presisco.lazystorm.bolt.kafka.LazyJsonMapper
 import com.presisco.lazystorm.bolt.redis.JedisMapListToHashBolt
+import com.presisco.lazystorm.bolt.redis.JedisMapToHashBolt
+import com.presisco.lazystorm.bolt.redis.JedisSingletonBolt
 import com.presisco.lazystorm.connector.DataSourceLoader
 import com.presisco.lazystorm.connector.JedisPoolLoader
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -238,18 +240,8 @@ class LazyTopoBuilder {
                 "SimpleReplaceBolt", "MapReplaceJdbcBolt" -> SimpleReplaceBolt()
                 "OracleSeqTagBolt" -> OracleSeqTagBolt(getString("tag"))
                 /*         Redis        */
-                "JedisMapListToHashBolt" -> {
-                    val jedisBolt = JedisMapListToHashBolt(getString("key_field"))
-                            .setJedisPoolLoader(getJedisPoolLoader(getString("redis")))
-
-                    if (containsKey("stream_key_map")) {
-                        jedisBolt.setStreamKeyMap(getHashMap("stream_key_map"))
-                    } else {
-                        jedisBolt.setStreamKeyMap(getHashMap("key"))
-                    }
-
-                    jedisBolt
-                }
+                "JedisMapListToHashBolt" -> JedisMapListToHashBolt(getString("key_field"))
+                "JedisMapToHashBolt" -> JedisMapToHashBolt()
                 /*         Debug        */
                 "TupleConsoleDumpBolt" -> TupleConsoleDumpBolt()
                 else -> null
@@ -259,23 +251,33 @@ class LazyTopoBuilder {
                 is LazyBasicBolt<*> -> bolt.setSrcPos(srcPos).setSrcField(srcField)
                 is LazyTickBolt<*> -> bolt.setSrcPos(srcPos).setSrcField(srcField)
             }
-            if (bolt is BaseJdbcBolt<*>) {
-                bolt.setDataSource(getDataSourceLoader(getString("data_source")))
-                        .setQueryTimeout(getInt("timeout"))
-                        .setRollbackOnFailure(getBoolean("rollback"))
-                if (bolt is JdbcClientBolt<*>) {
-                    bolt.setEmitOnException(getBoolean("emit_on_failure"))
-                }
-                val keyword = if (bolt is OracleSeqTagBolt) {
-                    "sequence"
-                } else {
-                    "table"
-                }
+            when (bolt) {
+                is BaseJdbcBolt<*> -> {
+                    bolt.setDataSource(getDataSourceLoader(getString("data_source")))
+                            .setQueryTimeout(getInt("timeout"))
+                            .setRollbackOnFailure(getBoolean("rollback"))
+                    if (bolt is JdbcClientBolt<*>) {
+                        bolt.setEmitOnException(getBoolean("emit_on_failure"))
+                    }
+                    val keyword = if (bolt is OracleSeqTagBolt) {
+                        "sequence"
+                    } else {
+                        "table"
+                    }
 
-                if (containsKey("stream_${keyword}_map")) {
-                    bolt.setStreamTableMap(getHashMap("stream_${keyword}_map"))
-                } else {
-                    bolt.setTableName(getString(keyword))
+                    if (containsKey("stream_${keyword}_map")) {
+                        bolt.setStreamTableMap(getHashMap("stream_${keyword}_map"))
+                    } else {
+                        bolt.setTableName(getString(keyword))
+                    }
+                }
+                is JedisSingletonBolt<*> -> {
+                    bolt.setJedisPoolLoader(getJedisPoolLoader(getString("redis")))
+                    if (containsKey("stream_key_map")) {
+                        bolt.setStreamKeyMap(getHashMap("stream_key_map"))
+                    } else {
+                        bolt.setDataKey(getString("key"))
+                    }
                 }
             }
             return bolt

@@ -205,6 +205,14 @@
       },
       "key_field": "id",
       "parallelism": 1
+    },
+    "jedis_map_to_hash_bolt": {
+      "type": "bolt",
+      "class": "JedisMapToHashBolt",
+      "upstream": "json_2_map_bolt",
+      "redis": "singleton",
+      "key": "some_one",
+      "parallelism": 1
     }
   }
 }
