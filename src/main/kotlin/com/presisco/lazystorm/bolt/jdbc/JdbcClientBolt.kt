@@ -40,26 +40,16 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
         val data = getArrayListInput(tuple)
         val stream = tuple.sourceStreamId
         val table = getTable(stream)
+        var output = 0
 
         try {
             val result = process(data as List<*>, table, jdbcClient as CLIENT)
             if (result.isNotEmpty()) {
                 outputCollector.emitDataToStreams(stream, result)
             }
-            val duration = stopWatch.currentDurationFromStart()
-            outputCollector.emitStats(
-                    hashMapOf(
-                            "database" to dataSourceLoader.name,
-                            "table" to table,
-                            "duration" to duration,
-                            "total" to data.size,
-                            "failed" to result.size
-                    ),
-                    Constants.getTimeStampString()
-            )
+            output = result.size
         } catch (e: Exception) {
             if (emitOnException) {
-                val duration = stopWatch.currentDurationFromStart()
                 if (customDataStreams.isNotEmpty()) {
                     outputCollector.emitDataToStreams(
                             stream,
@@ -72,19 +62,21 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
                             Constants.getTimeStampString()
                     )
                 }
-                outputCollector.emitStats(
-                        hashMapOf(
-                                "database" to dataSourceLoader.name,
-                                "table" to table,
-                                "duration" to duration,
-                                "total" to (data as List<*>).size,
-                                "failed" to data.size
-                        ),
-                        Constants.getTimeStampString()
-                )
             } else {
                 throw e
             }
+        } finally {
+            val duration = stopWatch.currentDurationFromStart()
+            outputCollector.emitStats(
+                    hashMapOf(
+                            "database" to dataSourceLoader.name,
+                            "table" to table,
+                            "duration" to duration,
+                            "input" to (data as List<*>).size,
+                            "output" to output
+                    ),
+                    Constants.getTimeStampString()
+            )
         }
     }
 }
