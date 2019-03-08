@@ -53,6 +53,38 @@ abstract class LazyBasicBolt<out T>(
         this.emitData(data)
     }
 
+    protected fun <T> Map<String, *>.byType(key: String): T = if (this.containsKey(key)) this[key] as T else throw IllegalStateException("$key not defined in config")
+
+    protected fun Map<String, *>.getInt(key: String) = this.byType<Number>(key).toInt()
+
+    protected fun Map<String, *>.getLong(key: String) = this.byType<Number>(key).toLong()
+
+    protected fun Map<String, *>.getString(key: String) = this.byType<String>(key)
+
+    protected fun Map<String, *>.getBoolean(key: String) = this.byType<Boolean>(key)
+
+    protected fun <K, V> Map<String, *>.getMap(key: String) = this.byType<Map<K, V>>(key)
+
+    protected fun Map<String, *>.getHashMap(key: String) = this.byType<HashMap<String, Any?>>(key)
+
+    protected fun <E> Map<String, *>.getList(key: String) = this.byType<List<E>>(key)
+
+    protected fun <E> Map<String, *>.getArrayList(key: String) = this.byType<ArrayList<E>>(key)
+
+    protected fun Map<String, *>.getListOfMap(key: String) = this[key] as List<Map<String, *>>
+
+    protected fun <K, V> Map<String, V>.mapKeyToHashMap(keyMap: (key: String) -> K): HashMap<K, V> {
+        val hashMap = hashMapOf<K, V>()
+        this.forEach { key, value -> hashMap[keyMap(key)] = value }
+        return hashMap
+    }
+
+    protected fun <Old, New> Map<String, Old>.mapValueToHashMap(valueMap: (value: Old) -> New): HashMap<String, New> {
+        val hashMap = hashMapOf<String, New>()
+        this.forEach { key, value -> hashMap[key] = valueMap(value) }
+        return hashMap
+    }
+
     override fun declareOutputFields(declarer: OutputFieldsDeclarer) {
         declarer.declareStream(
                 Constants.DATA_STREAM_NAME,

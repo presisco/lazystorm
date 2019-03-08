@@ -1,10 +1,10 @@
 package com.presisco.lazystorm.bolt.kafka
 
 import com.presisco.lazystorm.bolt.Constants
+import com.presisco.lazystorm.bolt.LazyBasicBolt
 import org.apache.storm.topology.BasicOutputCollector
 import org.apache.storm.topology.FailedException
 import org.apache.storm.topology.OutputFieldsDeclarer
-import org.apache.storm.topology.base.BaseBasicBolt
 import org.apache.storm.tuple.Fields
 import org.apache.storm.tuple.Tuple
 import org.apache.storm.tuple.Values
@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory
 
 abstract class KafkaKeySwitchBolt<K, V>(
         private val kafkaKey2StreamIdMap: HashMap<K, String>
-) : BaseBasicBolt() {
+) : LazyBasicBolt<Any>() {
     private val logger = LoggerFactory.getLogger(KafkaKeySwitchBolt::class.java)
 
     override fun execute(tuple: Tuple, outputCollector: BasicOutputCollector) {
