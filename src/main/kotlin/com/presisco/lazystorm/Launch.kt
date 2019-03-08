@@ -1,13 +1,14 @@
 package com.presisco.lazystorm
 
 import com.presisco.gsonhelper.ConfigMapHelper
+import org.apache.storm.topology.IComponent
 import org.apache.storm.topology.IRichSpout
 
 abstract class Launch {
 
     abstract val createCustomSpout: (String, Map<String, Any?>) -> IRichSpout
 
-    abstract val createCustomBolt: (String, Map<String, Any?>) -> Any
+    abstract val createCustomBolt: (String, Map<String, Any?>) -> IComponent
 
     private val cmdArgs: MutableMap<String, String> = mutableMapOf(
             "config" to "sample/config.json",
@@ -17,7 +18,7 @@ abstract class Launch {
     fun String.getKey() = this.substringBefore('=')
     fun String.getValue() = this.substringAfter('=')
 
-    private lateinit var stormBoot: StormBoot
+    lateinit var stormBoot: StormBoot
 
     protected fun <T> Map<String, *>.byType(key: String): T = if (this.containsKey(key)) this[key] as T else throw IllegalStateException("$key not defined in config")
 

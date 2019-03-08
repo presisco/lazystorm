@@ -20,6 +20,7 @@ import org.apache.storm.kafka.bolt.selector.DefaultTopicSelector
 import org.apache.storm.kafka.spout.KafkaSpout
 import org.apache.storm.kafka.spout.KafkaSpoutConfig
 import org.apache.storm.topology.*
+import org.apache.storm.topology.base.BaseWindowedBolt
 import org.apache.storm.tuple.Fields
 import java.util.*
 import kotlin.collections.ArrayList
@@ -163,7 +164,7 @@ class LazyTopoBuilder {
 
     fun getJedisPoolLoader(name: String) = jedisLoaders[name]!!
 
-    fun createLazyBolt(name: String, config: Map<String, Any>): Any? {
+    fun createLazyBolt(name: String, config: Map<String, Any>, createCustomBolt: (name: String, config: Map<String, Any>) -> IComponent): IComponent {
         with(config) {
             val itemClass = getOrDefault("class", "unknown")
             val srcPos = if (config.containsKey("srcPos")) getInt("srcPos") else Constants.DATA_FIELD_POS
@@ -244,12 +245,20 @@ class LazyTopoBuilder {
                 "JedisMapToHashBolt" -> JedisMapToHashBolt()
                 /*         Debug        */
                 "TupleConsoleDumpBolt" -> TupleConsoleDumpBolt()
-                else -> null
+                else -> createCustomBolt(name, config)
             }
-            bolt ?: return null
             when (bolt) {
                 is LazyBasicBolt<*> -> bolt.setSrcPos(srcPos).setSrcField(srcField)
                 is LazyTickBolt<*> -> bolt.setSrcPos(srcPos).setSrcField(srcField)
+                is LazyWindowedBolt<*> -> when (config["window_mode"]) {
+                    "sliding" -> bolt.withWindow(
+                            BaseWindowedBolt.Duration.seconds(config.getInt("window_length")),
+                            BaseWindowedBolt.Duration.seconds(config.getInt("sliding_interval"))
+                    )
+                    "tumbling" -> bolt.withTumblingWindow(
+                            BaseWindowedBolt.Duration.seconds(config.getInt("window_length"))
+                    )
+                }
             }
             when (bolt) {
                 is BaseJdbcBolt<*> -> {
@@ -284,7 +293,7 @@ class LazyTopoBuilder {
         }
     }
 
-    fun createLazySpout(name: String, config: Map<String, Any>): IRichSpout? {
+    fun createLazySpout(name: String, config: Map<String, Any>, createSpout: (name: String, config: Map<String, Any>) -> IRichSpout): IRichSpout {
         with(config) {
             val itemClass = getString("class")
             return when (itemClass) {
@@ -298,7 +307,7 @@ class LazyTopoBuilder {
                                 .setProcessingGuarantee(KafkaSpoutConfig.ProcessingGuarantee.AT_LEAST_ONCE)
                                 .build()
                 )
-                else -> null
+                else -> createSpout(name, config)
             }
         }
     }
@@ -339,7 +348,7 @@ class LazyTopoBuilder {
     fun buildTopology(
             topoConfig: Map<String, Map<String, Any>>,
             createSpout: (name: String, config: Map<String, Any>) -> IRichSpout,
-            createBolt: (name: String, config: Map<String, Any>) -> Any
+            createBolt: (name: String, config: Map<String, Any>) -> IComponent
     ): StormTopology {
         scanStreams(topoConfig)
 
@@ -357,7 +366,7 @@ class LazyTopoBuilder {
                     when (type) {
                         "spout" -> {
                             val spout: IRichSpout = try {
-                                createLazySpout(name, config) ?: createSpout(name, config)
+                                createLazySpout(name, config, createSpout)
                             } catch (e: IllegalStateException) {
                                 throw IllegalStateException("config for spout: $name is wrong, ${e.message}")
                             }
@@ -368,8 +377,8 @@ class LazyTopoBuilder {
                             )
                         }
                         "bolt" -> {
-                            val bolt: Any = try {
-                                createLazyBolt(name, config) ?: createBolt(name, config)
+                            val bolt = try {
+                                createLazyBolt(name, config, createBolt)
                             } catch (e: IllegalStateException) {
                                 throw IllegalStateException("config for bolt: $name is wrong, ${e.message}")
                             }
