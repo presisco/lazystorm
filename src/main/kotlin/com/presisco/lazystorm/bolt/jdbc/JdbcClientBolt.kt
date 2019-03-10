@@ -24,7 +24,7 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
         return this
     }
 
-    override fun prepare(stormConf: MutableMap<Any?, Any?>, context: TopologyContext) {
+    override fun prepare(stormConf: Map<*, *>, context: TopologyContext) {
         super.prepare(stormConf, context)
         try {
             jdbcClient = loadJdbcClient()
@@ -55,6 +55,7 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
                             stream,
                             data
                     )
+                    output = data.size
                 } else {
                     outputCollector.emitFailed(
                             data,
@@ -72,7 +73,7 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
                             "database" to dataSourceLoader.name,
                             "table" to table,
                             "duration" to duration,
-                            "input" to (data as List<*>).size,
+                            "input" to data.size,
                             "output" to output
                     ),
                     Constants.getTimeStampString()
