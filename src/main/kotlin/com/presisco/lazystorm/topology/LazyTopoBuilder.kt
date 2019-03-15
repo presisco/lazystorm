@@ -240,6 +240,7 @@ class LazyTopoBuilder {
                 "SimpleInsertBolt", "MapInsertJdbcBolt" -> SimpleInsertBolt()
                 "SimpleReplaceBolt", "MapReplaceJdbcBolt" -> SimpleReplaceBolt()
                 "OracleSeqTagBolt" -> OracleSeqTagBolt(getString("tag"))
+                "StreamFieldDirectInsertBolt" -> StreamFieldDirectInsertBolt(getString("field"))
                 /*         Redis        */
                 "JedisMapListToHashBolt" -> JedisMapListToHashBolt(getString("key_field"))
                 "JedisMapToHashBolt" -> JedisMapToHashBolt()
