@@ -17,7 +17,7 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
 
     abstract fun loadJdbcClient(): BaseJdbcClient<*>
 
-    abstract fun process(data: List<*>, table: String, client: CLIENT, collector: BasicOutputCollector): List<*>
+    abstract fun process(boltName: String, streamName: String, data: List<*>, table: String, client: CLIENT, collector: BasicOutputCollector): List<*>
 
     fun setEmitOnException(flag: Boolean): JdbcClientBolt<CLIENT> {
         emitOnException = flag
@@ -43,7 +43,7 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
         var output = 0
 
         try {
-            val result = process(data as List<*>, table, jdbcClient as CLIENT, outputCollector)
+            val result = process(tuple.sourceComponent, tuple.sourceStreamId, data as List<*>, table, jdbcClient as CLIENT, outputCollector)
             if (result.isNotEmpty()) {
                 outputCollector.emitDataToStreams(stream, result)
             }

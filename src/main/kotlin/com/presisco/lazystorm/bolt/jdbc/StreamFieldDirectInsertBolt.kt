@@ -2,11 +2,10 @@ package com.presisco.lazystorm.bolt.jdbc
 
 import com.presisco.lazyjdbc.client.MapJdbcClient
 import org.apache.storm.topology.BasicOutputCollector
-import org.slf4j.LoggerFactory
 
-open class SimpleInsertBolt : MapJdbcClientBolt() {
-    private val logger = LoggerFactory.getLogger(SimpleInsertBolt::class.java)
-
+class StreamFieldDirectInsertBolt(
+        private val streamField: String
+): MapJdbcClientBolt() {
     override fun process(
             boltName: String,
             streamName: String,
@@ -15,7 +14,14 @@ open class SimpleInsertBolt : MapJdbcClientBolt() {
             client: MapJdbcClient,
             collector: BasicOutputCollector
     ): List<*> {
-        val failedSet = client.insert(table, data as List<Map<String, Any?>>)
+        val taggedList = data.map {
+            original ->
+            val tagged = hashMapOf<String, Any?>()
+            tagged.putAll(original as Map<String, *>)
+            tagged[streamField] = streamName
+            tagged
+        }
+        val failedSet = client.insert(table, taggedList)
         return if (failedSet.isEmpty()) {
             listOf<Any>()
         } else {

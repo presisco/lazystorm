@@ -1,16 +1,20 @@
 package com.presisco.lazystorm.bolt.jdbc
 
 import com.presisco.lazyjdbc.client.MapJdbcClient
-import com.presisco.lazystorm.bolt.Constants
 import org.apache.storm.topology.BasicOutputCollector
 import org.slf4j.LoggerFactory
 
-open class SimpleReplaceBolt : JdbcClientBolt<MapJdbcClient>() {
+open class SimpleReplaceBolt : MapJdbcClientBolt() {
     private val logger = LoggerFactory.getLogger(SimpleReplaceBolt::class.java)
 
-    override fun loadJdbcClient() = MapJdbcClient(dataSource, queryTimeout, rollbackOnBatchFailure).withDateFormat(Constants.timeStampFormat)
-
-    override fun process(data: List<*>, table: String, client: MapJdbcClient, collector: BasicOutputCollector): List<*> {
+    override fun process(
+            boltName: String,
+            streamName: String,
+            data: List<*>,
+            table: String,
+            client: MapJdbcClient,
+            collector: BasicOutputCollector
+    ): List<*> {
         val failedSet = client.replace(table, data as List<Map<String, Any?>>)
         return if (failedSet.isEmpty()) {
             listOf<Any>()
