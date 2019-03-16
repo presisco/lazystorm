@@ -35,6 +35,8 @@ abstract class LazyWindowedBolt<T>(
 
     protected fun TupleWindow.toDataList(): List<T> = this.get().map { getInput(it) }
 
+    protected fun Tuple.toDataMap(): Map<String, *> = this.getValueByField(Constants.DATA_FIELD_NAME) as Map<String, *>
+
     fun getArrayListInput(tuple: Tuple): ArrayList<out T> {
         val fuzzy = getInput(tuple)
 
