@@ -9,7 +9,14 @@ class OracleSeqTagBolt(
 
     override fun loadJdbcClient() = OracleMapJdbcClient(dataSource, queryTimeout, rollbackOnBatchFailure)
 
-    override fun process(data: List<*>, table: String, client: OracleMapJdbcClient, collector: BasicOutputCollector): List<*> {
+    override fun process(
+            boltName: String,
+            streamName: String,
+            data: List<*>,
+            table: String,
+            client: OracleMapJdbcClient,
+            collector: BasicOutputCollector
+    ): List<*> {
         val ids = client.querySequence(table, data.size)
         data.forEachIndexed { index, item -> (item as MutableMap<String, Any?>)[tag] = ids[index] }
         return data

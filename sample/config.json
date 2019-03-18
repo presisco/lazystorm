@@ -178,6 +178,19 @@
       "grouping": "shuffle",
       "parallelism": 1
     },
+    "stream_field_direct_insert_bolt": {
+      "type": "bolt",
+      "class": "StreamFieldDirectInsertBolt",
+      "data_source": "mysql",
+      "table": "third",
+      "field": "stream",
+      "timeout": 5,
+      "rollback": true,
+      "emit_on_failure": false,
+      "upstream": "json_2_map_bolt",
+      "grouping": "shuffle",
+      "parallelism": 1
+    },
     "oracle_seq_tag_bolt": {
       "type": "bolt",
       "upstream": "json_2_map_bolt",

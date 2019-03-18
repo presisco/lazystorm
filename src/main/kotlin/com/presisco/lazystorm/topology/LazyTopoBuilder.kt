@@ -240,6 +240,7 @@ class LazyTopoBuilder {
                 "SimpleInsertBolt", "MapInsertJdbcBolt" -> SimpleInsertBolt()
                 "SimpleReplaceBolt", "MapReplaceJdbcBolt" -> SimpleReplaceBolt()
                 "OracleSeqTagBolt" -> OracleSeqTagBolt(getString("tag"))
+                "StreamFieldDirectInsertBolt" -> StreamFieldDirectInsertBolt(getString("field"))
                 /*         Redis        */
                 "JedisMapListToHashBolt" -> JedisMapListToHashBolt(getString("key_field"))
                 "JedisMapToHashBolt" -> JedisMapToHashBolt()
@@ -251,12 +252,19 @@ class LazyTopoBuilder {
                 is LazyBasicBolt<*> -> bolt.setSrcPos(srcPos).setSrcField(srcField)
                 is LazyTickBolt<*> -> bolt.setSrcPos(srcPos).setSrcField(srcField)
                 is LazyWindowedBolt<*> -> when (config["window_mode"]) {
-                    "sliding" -> bolt.withWindow(
+                    "sliding_duration" -> bolt.withWindow(
                             BaseWindowedBolt.Duration.seconds(config.getInt("window_length")),
                             BaseWindowedBolt.Duration.seconds(config.getInt("sliding_interval"))
                     )
-                    "tumbling" -> bolt.withTumblingWindow(
+                    "tumbling_duration" -> bolt.withTumblingWindow(
                             BaseWindowedBolt.Duration.seconds(config.getInt("window_length"))
+                    )
+                    "sliding_count" -> bolt.withWindow(
+                            BaseWindowedBolt.Count(config.getInt("window_length")),
+                            BaseWindowedBolt.Count(config.getInt("sliding_interval"))
+                    )
+                    "tumbling_count" -> bolt.withTumblingWindow(
+                            BaseWindowedBolt.Count(config.getInt("window_length"))
                     )
                 }
             }
