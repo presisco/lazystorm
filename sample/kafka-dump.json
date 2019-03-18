@@ -6,6 +6,7 @@
   "lifetime_minute": 60,
   "data_source": {
   },
+  "redis": {},
   "topology": {
     "kafka_spout": {
       "type": "spout",
