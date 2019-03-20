@@ -1,11 +1,11 @@
 package com.presisco.lazystorm.SampleTopology
 
 import com.presisco.lazystorm.LazyLaunch
-import org.junit.Test
+import org.junit.Ignore
 
 class KafkaConsumeTest {
 
-    @Test
+    @Ignore
     fun run() {
         LazyLaunch.main(arrayOf(
                 "config=sample/kafka-dump.json",

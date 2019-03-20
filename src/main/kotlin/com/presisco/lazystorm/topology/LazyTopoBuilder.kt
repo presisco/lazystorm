@@ -260,11 +260,11 @@ class LazyTopoBuilder {
                             BaseWindowedBolt.Duration.seconds(config.getInt("window_length"))
                     )
                     "sliding_count" -> bolt.withWindow(
-                            BaseWindowedBolt.Count(config.getInt("window_length")),
-                            BaseWindowedBolt.Count(config.getInt("sliding_interval"))
+                            BaseWindowedBolt.Count.of(config.getInt("window_length")),
+                            BaseWindowedBolt.Count.of(config.getInt("sliding_interval"))
                     )
                     "tumbling_count" -> bolt.withTumblingWindow(
-                            BaseWindowedBolt.Count(config.getInt("window_length"))
+                            BaseWindowedBolt.Count.of(config.getInt("window_length"))
                     )
                 }
             }
