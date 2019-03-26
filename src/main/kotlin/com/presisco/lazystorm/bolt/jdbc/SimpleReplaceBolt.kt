@@ -14,12 +14,5 @@ open class SimpleReplaceBolt : MapJdbcClientBolt() {
             table: String,
             client: MapJdbcClient,
             collector: BasicOutputCollector
-    ): List<*> {
-        val failedSet = client.replace(table, data as List<Map<String, Any?>>)
-        return if (failedSet.isEmpty()) {
-            listOf<Any>()
-        } else {
-            data.filterIndexed { index, _ -> failedSet.contains(index) }
-        }
-    }
+    ) = client.replace(table, data as List<Map<String, Any?>>).map { data[it] }
 }

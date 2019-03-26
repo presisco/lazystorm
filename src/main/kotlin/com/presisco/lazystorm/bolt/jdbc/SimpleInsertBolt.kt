@@ -14,12 +14,6 @@ open class SimpleInsertBolt : MapJdbcClientBolt() {
             table: String,
             client: MapJdbcClient,
             collector: BasicOutputCollector
-    ): List<*> {
-        val failedSet = client.insert(table, data as List<Map<String, Any?>>)
-        return if (failedSet.isEmpty()) {
-            listOf<Any>()
-        } else {
-            data.filterIndexed { index, _ -> failedSet.contains(index) }
-        }
-    }
+    ) = client.insert(table, data as List<Map<String, Any?>>).map { data[it] }
+
 }

@@ -1,6 +1,7 @@
 package com.presisco.lazystorm.bolt.jdbc
 
 import com.presisco.lazyjdbc.client.OracleMapJdbcClient
+import com.presisco.lazystorm.addFieldToNewMap
 import org.apache.storm.topology.BasicOutputCollector
 
 class OracleSeqTagBolt(
@@ -16,9 +17,9 @@ class OracleSeqTagBolt(
             table: String,
             client: OracleMapJdbcClient,
             collector: BasicOutputCollector
-    ): List<*> {
-        val ids = client.querySequence(table, data.size)
-        data.forEachIndexed { index, item -> (item as MutableMap<String, Any?>)[tag] = ids[index] }
-        return data
-    }
+    ) = client.querySequence(table, data.size)
+            .mapIndexed { index, id ->
+                (data[index] as Map<String, Any?>).addFieldToNewMap(tag to id)
+            }
+
 }
