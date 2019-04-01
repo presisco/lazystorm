@@ -63,8 +63,8 @@ abstract class TimedSpout : BaseRichSpout() {
         }
         stopWatch.stop()
         val duration = stopWatch.durationFromStart()
-        if (duration < intervalSec) {
-            Thread.sleep(intervalSec - duration)
+        if (duration < intervalSec * 1000) {
+            Thread.sleep(intervalSec * 1000 - duration)
         }
     }
 

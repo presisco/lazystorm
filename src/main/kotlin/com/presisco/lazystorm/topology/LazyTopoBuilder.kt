@@ -416,26 +416,35 @@ class LazyTopoBuilder {
                                 }
                             }
 
-                            when (upstream) {
-                                is Map<*, *> -> upstream.forEach { (boltName, streamName) ->
-                                    validateUpstreamName(boltName as String)
-                                    setGrouping(declarer, grouping, boltName, streamName as String, groupingParams)
-                                }
-                                is Collection<*> -> upstream.forEach {
-                                    validateUpstreamName(it as String)
-                                    setGrouping(declarer, grouping, it, groupingParams)
-                                }
-                                is String -> {
-                                    validateUpstreamName(upstream)
-                                    if (bolt is LazyBasicBolt<*> && streamDefs.containsKey(upstream)) {
-                                        streamDefs[upstream]!!.forEach {
-                                            setGrouping(declarer, grouping, upstream, it, groupingParams)
+                            try {
+                                when (upstream) {
+                                    is Map<*, *> -> upstream.forEach { (boltName, streamName) ->
+                                        validateUpstreamName(boltName as String)
+                                        when (streamName) {
+                                            is List<*> -> streamName.forEach { stream ->
+                                                setGrouping(declarer, grouping, boltName, stream as String, groupingParams)
+                                            }
+                                            else -> setGrouping(declarer, grouping, boltName, streamName as String, groupingParams)
                                         }
-                                    } else {
-                                        setGrouping(declarer, grouping, upstream, groupingParams)
+                                    }
+                                    is Collection<*> -> upstream.forEach {
+                                        validateUpstreamName(it as String)
+                                        setGrouping(declarer, grouping, it, groupingParams)
+                                    }
+                                    else -> {
+                                        upstream as String
+                                        validateUpstreamName(upstream)
+                                        if (bolt is LazyBasicBolt<*> && streamDefs.containsKey(upstream)) {
+                                            streamDefs[upstream]!!.forEach {
+                                                setGrouping(declarer, grouping, upstream, it, groupingParams)
+                                            }
+                                        } else {
+                                            setGrouping(declarer, grouping, upstream, groupingParams)
+                                        }
                                     }
                                 }
-                                else -> throw java.lang.Exception("bad upstream definition! $upstream")
+                            } catch (e: ClassCastException) {
+                                throw Exception("bad upstream definition for bolt: $name! upstream in config: $upstream, supported types: String, List<String>, Map<String, String>, Map<String, List<String>>")
                             }
                         }
                         else -> throw IllegalStateException("unsupported type: $type")
