@@ -13,6 +13,7 @@ import com.presisco.lazystorm.bolt.redis.JedisMapToHashBolt
 import com.presisco.lazystorm.bolt.redis.JedisSingletonBolt
 import com.presisco.lazystorm.connector.DataSourceLoader
 import com.presisco.lazystorm.connector.JedisPoolLoader
+import com.presisco.lazystorm.spout.TimedSpout
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.storm.generated.StormTopology
 import org.apache.storm.kafka.bolt.KafkaBolt
@@ -304,7 +305,7 @@ class LazyTopoBuilder {
     fun createLazySpout(name: String, config: Map<String, Any>, createSpout: (name: String, config: Map<String, Any>) -> IRichSpout): IRichSpout {
         with(config) {
             val itemClass = getString("class")
-            return when (itemClass) {
+            val spout = when (itemClass) {
                 "KafkaSpout" -> KafkaSpout(
                         KafkaSpoutConfig.Builder<String, String>(
                                 getString("brokers"),
@@ -317,6 +318,10 @@ class LazyTopoBuilder {
                 )
                 else -> createSpout(name, config)
             }
+            when (spout) {
+                is TimedSpout -> spout.setIntervalSec(getLong("interval"))
+            }
+            return spout
         }
     }
 
