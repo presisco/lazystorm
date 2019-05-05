@@ -1,6 +1,7 @@
 package com.presisco.lazystorm.bolt
 
 import com.presisco.datamodel.checker.FlatMapChecker
+import com.presisco.lazystorm.nowTimeString
 import org.apache.storm.topology.BasicOutputCollector
 import org.apache.storm.tuple.Tuple
 
@@ -9,7 +10,7 @@ open class FormatCheckBolt(
 ) : LazyBasicBolt<Any>() {
 
     override fun execute(tuple: Tuple, collector: BasicOutputCollector) {
-        var data = getArrayListInput(tuple)
+        val data = getArrayListInput(tuple)
 
         val passed = arrayListOf<Map<String, *>>()
         val failed = arrayListOf<Map<String, *>>()
@@ -26,7 +27,7 @@ open class FormatCheckBolt(
             collector.emitData(passed)
         }
         if (failed.isNotEmpty()) {
-            collector.emitFailed(failed, "bad format", Constants.getTimeStampString())
+            collector.emitFailed(failed, "bad format", nowTimeString())
         }
     }
 }

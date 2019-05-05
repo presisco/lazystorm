@@ -1,8 +1,10 @@
 package com.presisco.lazystorm.test
 
 import com.presisco.gsonhelper.ConfigMapHelper
+import com.presisco.lazystorm.DATA_STREAM_NAME
+import com.presisco.lazystorm.FAILED_STREAM_NAME
 import com.presisco.lazystorm.Launch
-import com.presisco.lazystorm.bolt.Constants
+import com.presisco.lazystorm.STATS_STREAM_NAME
 import com.presisco.lazystorm.topology.LazyTopoBuilder
 import org.apache.storm.spout.SpoutOutputCollector
 import org.apache.storm.task.TopologyContext
@@ -23,15 +25,15 @@ abstract class LazySpoutTest(launcher: Launch, configPath: String, spoutName: St
     }
 
     protected fun SpoutOutputCollector.emitData(data: Any) {
-        this.emit(Constants.DATA_STREAM_NAME, Values(data))
+        this.emit(DATA_STREAM_NAME, Values(data))
     }
 
     protected fun SpoutOutputCollector.emitFailed(data: Any, msg: String, time: String) {
-        this.emit(Constants.FAILED_STREAM_NAME, Values(data, msg, time))
+        this.emit(FAILED_STREAM_NAME, Values(data, msg, time))
     }
 
     protected fun SpoutOutputCollector.emitStats(data: Any, time: String) {
-        this.emit(Constants.STATS_STREAM_NAME, Values(data, time))
+        this.emit(STATS_STREAM_NAME, Values(data, time))
     }
 
     fun fakeEmptyPrepare(): SpoutOutputCollector {

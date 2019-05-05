@@ -1,5 +1,10 @@
 package com.presisco.lazystorm
 
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+
 fun <T> Map<String, *>.byType(key: String): T = if (this.containsKey(key)) this[key] as T else throw IllegalStateException("$key not defined in config")
 
 fun Map<String, *>.getInt(key: String) = this.byType<Number>(key).toInt()
@@ -50,3 +55,8 @@ fun <Old, New> Map<String, Old>.mapValueToHashMap(valueMap: (value: Old) -> New)
     return hashMap
 }
 
+fun String.toSystemMs(format: DateTimeFormatter = com.presisco.lazyjdbc.defaultTimeStampFormat) = LocalDateTime.parse(this, format).toSystemMs()
+
+fun LocalDateTime.toSystemMs() = this.toInstant(OffsetDateTime.now().offset).toEpochMilli()
+
+fun Long.toLocalDateTime() = LocalDateTime.ofInstant(Instant.ofEpochMilli(this), systemZoneId)

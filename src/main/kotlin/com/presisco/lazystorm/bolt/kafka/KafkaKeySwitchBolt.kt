@@ -1,6 +1,6 @@
 package com.presisco.lazystorm.bolt.kafka
 
-import com.presisco.lazystorm.bolt.Constants
+import com.presisco.lazystorm.DATA_FIELD_NAME
 import com.presisco.lazystorm.bolt.LazyBasicBolt
 import org.apache.storm.topology.BasicOutputCollector
 import org.apache.storm.topology.FailedException
@@ -26,6 +26,6 @@ abstract class KafkaKeySwitchBolt<K, V>(
     }
 
     override fun declareOutputFields(declarer: OutputFieldsDeclarer) {
-        kafkaKey2StreamIdMap.values.forEach { id -> declarer.declareStream(id, Fields(Constants.DATA_FIELD_NAME)) }
+        kafkaKey2StreamIdMap.values.forEach { id -> declarer.declareStream(id, Fields(DATA_FIELD_NAME)) }
     }
 }

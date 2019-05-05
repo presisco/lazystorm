@@ -1,8 +1,10 @@
 package com.presisco.lazystorm.test
 
 import com.presisco.gsonhelper.ConfigMapHelper
+import com.presisco.lazystorm.DATA_STREAM_NAME
+import com.presisco.lazystorm.FAILED_STREAM_NAME
 import com.presisco.lazystorm.Launch
-import com.presisco.lazystorm.bolt.Constants
+import com.presisco.lazystorm.STATS_STREAM_NAME
 import com.presisco.lazystorm.bolt.LazyWindowedBolt
 import com.presisco.lazystorm.topology.LazyTopoBuilder
 import org.apache.storm.task.OutputCollector
@@ -23,15 +25,15 @@ abstract class LazyWindowedBoltTest(launcher: Launch, configPath: String, boltNa
     }
 
     protected fun OutputCollector.emitData(data: Any) {
-        this.emit(Constants.DATA_STREAM_NAME, Values(data))
+        this.emit(DATA_STREAM_NAME, Values(data))
     }
 
     protected fun OutputCollector.emitFailed(data: Any, msg: String, time: String) {
-        this.emit(Constants.FAILED_STREAM_NAME, Values(data, msg, time))
+        this.emit(FAILED_STREAM_NAME, Values(data, msg, time))
     }
 
     protected fun OutputCollector.emitStats(data: Any, time: String) {
-        this.emit(Constants.STATS_STREAM_NAME, Values(data, time))
+        this.emit(STATS_STREAM_NAME, Values(data, time))
     }
 
     fun fakeEmptyPrepare(): OutputCollector {

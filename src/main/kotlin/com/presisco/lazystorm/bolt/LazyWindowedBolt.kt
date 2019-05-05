@@ -1,5 +1,6 @@
 package com.presisco.lazystorm.bolt
 
+import com.presisco.lazystorm.*
 import org.apache.storm.task.OutputCollector
 import org.apache.storm.task.TopologyContext
 import org.apache.storm.topology.OutputFieldsDeclarer
@@ -11,8 +12,8 @@ import org.apache.storm.windowing.TupleWindow
 import org.slf4j.LoggerFactory
 
 abstract class LazyWindowedBolt<T>(
-        private var srcPos: Int = Constants.DATA_FIELD_POS,
-        private var srcField: String = Constants.DATA_FIELD_NAME
+        private var srcPos: Int = DATA_FIELD_POS,
+        private var srcField: String = DATA_FIELD_NAME
 ) : BaseWindowedBolt() {
     private val logger = LoggerFactory.getLogger(LazyWindowedBolt::class.java)
 
@@ -28,14 +29,14 @@ abstract class LazyWindowedBolt<T>(
         return this
     }
 
-    fun getInput(tuple: Tuple) = if (srcPos != Constants.DATA_FIELD_POS)
+    fun getInput(tuple: Tuple) = if (srcPos != DATA_FIELD_POS)
         tuple.getValue(srcPos) as T
     else
         tuple.getValueByField(srcField) as T
 
     protected fun TupleWindow.toDataList(): List<T> = this.get().map { getInput(it) }
 
-    protected fun Tuple.toDataMap(): Map<String, *> = this.getValueByField(Constants.DATA_FIELD_NAME) as Map<String, *>
+    protected fun Tuple.toDataMap(): Map<String, *> = this.getValueByField(DATA_FIELD_NAME) as Map<String, *>
 
     fun getArrayListInput(tuple: Tuple): ArrayList<out T> {
         val fuzzy = getInput(tuple)
@@ -47,11 +48,11 @@ abstract class LazyWindowedBolt<T>(
         }
     }
 
-    protected fun emitData(data: Any) = collector.emit(Constants.DATA_STREAM_NAME, Values(data))
+    protected fun emitData(data: Any) = collector.emit(DATA_STREAM_NAME, Values(data))
 
-    protected fun emitFailed(data: Any, msg: String, time: String) = collector.emit(Constants.FAILED_STREAM_NAME, Values(data, msg, time))
+    protected fun emitFailed(data: Any, msg: String, time: String) = collector.emit(FAILED_STREAM_NAME, Values(data, msg, time))
 
-    protected fun emitStats(data: Any, time: String) = collector.emit(Constants.STATS_STREAM_NAME, Values(data, time))
+    protected fun emitStats(data: Any, time: String) = collector.emit(STATS_STREAM_NAME, Values(data, time))
 
     protected fun emitDataToStreams(sourceStream: String, data: Any) = if (sourceStream in customDataStreams) {
         collector.emit(sourceStream, Values(data))
@@ -69,31 +70,31 @@ abstract class LazyWindowedBolt<T>(
 
     override fun declareOutputFields(declarer: OutputFieldsDeclarer) {
         declarer.declareStream(
-                Constants.DATA_STREAM_NAME,
-                Fields(Constants.DATA_FIELD_NAME))
+                DATA_STREAM_NAME,
+                Fields(DATA_FIELD_NAME))
         declarer.declareStream(
-                Constants.STATS_STREAM_NAME,
+                STATS_STREAM_NAME,
                 Fields(
-                        Constants.DATA_FIELD_NAME,
-                        Constants.STATS_TIME
+                        DATA_FIELD_NAME,
+                        STATS_TIME
                 )
         )
         declarer.declareStream(
-                Constants.FAILED_STREAM_NAME,
+                FAILED_STREAM_NAME,
                 Fields(
-                        Constants.DATA_FIELD_NAME,
-                        Constants.FAILED_MESSAGE_FIELD,
-                        Constants.FAILED_TIME
+                        DATA_FIELD_NAME,
+                        FAILED_MESSAGE_FIELD,
+                        FAILED_TIME
                 )
         )
         customDataStreams.filter {
             it !in setOf(
-                    Constants.DATA_STREAM_NAME,
-                    Constants.STATS_STREAM_NAME,
-                    Constants.FAILED_STREAM_NAME
+                    DATA_STREAM_NAME,
+                    STATS_STREAM_NAME,
+                    FAILED_STREAM_NAME
             )
         }.forEach {
-            declarer.declareStream(it, Fields(Constants.DATA_FIELD_NAME))
+            declarer.declareStream(it, Fields(DATA_FIELD_NAME))
         }
     }
 }

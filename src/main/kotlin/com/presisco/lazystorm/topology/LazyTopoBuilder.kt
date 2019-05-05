@@ -1,5 +1,7 @@
 package com.presisco.lazystorm.topology
 
+import com.presisco.lazystorm.DATA_FIELD_NAME
+import com.presisco.lazystorm.DATA_FIELD_POS
 import com.presisco.lazystorm.bolt.*
 import com.presisco.lazystorm.bolt.jdbc.*
 import com.presisco.lazystorm.bolt.json.FormattedJson2ListBolt
@@ -168,8 +170,8 @@ class LazyTopoBuilder {
     fun createLazyBolt(name: String, config: Map<String, Any>, createCustomBolt: (name: String, config: Map<String, Any>) -> IComponent): IComponent {
         with(config) {
             val itemClass = getOrDefault("class", "unknown")
-            val srcPos = if (config.containsKey("srcPos")) getInt("srcPos") else Constants.DATA_FIELD_POS
-            val srcField = if (config.containsKey("srcField")) getString("srcField") else Constants.DATA_FIELD_NAME
+            val srcPos = if (config.containsKey("srcPos")) getInt("srcPos") else DATA_FIELD_POS
+            val srcField = if (config.containsKey("srcField")) getString("srcField") else DATA_FIELD_NAME
 
             val bolt = when (itemClass) {
                 /*             Edit              */

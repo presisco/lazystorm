@@ -1,8 +1,7 @@
 package com.presisco.lazystorm.bolt.jdbc
 
 import com.presisco.lazyjdbc.client.BaseJdbcClient
-import com.presisco.lazystorm.bolt.Constants
-import com.presisco.toolbox.time.StopWatch
+import com.presisco.lazystorm.nowTimeString
 import org.apache.storm.task.TopologyContext
 import org.apache.storm.topology.BasicOutputCollector
 import org.apache.storm.tuple.Tuple
@@ -34,8 +33,7 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
     }
 
     override fun execute(tuple: Tuple, outputCollector: BasicOutputCollector) {
-        val stopWatch = StopWatch()
-        stopWatch.start()
+        val start = System.currentTimeMillis()
 
         val data = getArrayListInput(tuple)
         val stream = tuple.sourceStreamId
@@ -60,14 +58,14 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
                     outputCollector.emitFailed(
                             data,
                             e.message.toString(),
-                            Constants.getTimeStampString()
+                            nowTimeString()
                     )
                 }
             } else {
                 throw e
             }
         } finally {
-            val duration = stopWatch.currentDurationFromStart()
+            val duration = System.currentTimeMillis() - start
             outputCollector.emitStats(
                     hashMapOf(
                             "database" to dataSourceLoader.name,
@@ -76,7 +74,7 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
                             "input" to data.size,
                             "output" to output
                     ),
-                    Constants.getTimeStampString()
+                    nowTimeString()
             )
         }
     }

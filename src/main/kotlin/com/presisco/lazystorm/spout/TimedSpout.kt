@@ -1,7 +1,6 @@
 package com.presisco.lazystorm.spout
 
-import com.presisco.lazystorm.bolt.Constants
-import com.presisco.toolbox.time.StopWatch
+import com.presisco.lazystorm.DATA_FIELD_NAME
 import org.apache.storm.spout.SpoutOutputCollector
 import org.apache.storm.task.TopologyContext
 import org.apache.storm.topology.OutputFieldsDeclarer
@@ -55,14 +54,12 @@ abstract class TimedSpout : BaseRichSpout() {
     }
 
     override fun nextTuple() {
-        val stopWatch = StopWatch()
-        stopWatch.start()
+        val start = System.currentTimeMillis()
         val data = producer()
         data?.let {
             collector.emit(Values(it))
         }
-        stopWatch.stop()
-        val duration = stopWatch.durationFromStart()
+        val duration = System.currentTimeMillis() - start
         if (duration < intervalSec * 1000) {
             Thread.sleep(intervalSec * 1000 - duration)
         }
@@ -74,7 +71,7 @@ abstract class TimedSpout : BaseRichSpout() {
 
     override fun declareOutputFields(declarer: OutputFieldsDeclarer) {
         declarer.declare(
-                Fields(Constants.DATA_FIELD_NAME)
+                Fields(DATA_FIELD_NAME)
         )
     }
 }
