@@ -7,8 +7,8 @@ class TupleConsoleDumpBolt : LazyBasicBolt<Any>() {
     override fun execute(tuple: Tuple, outputCollector: BasicOutputCollector) {
         val fields = tuple.fields
         val values = tuple.values
-        val reconstructed = hashMapOf<String, Any>()
+        val reconstructed = hashMapOf<String, Any?>()
         fields.forEachIndexed { index, key -> reconstructed[key] = values[index] }
-        println(reconstructed.toString())
+        println(reconstructed)
     }
 }

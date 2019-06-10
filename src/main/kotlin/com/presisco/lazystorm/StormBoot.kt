@@ -8,6 +8,7 @@ import org.apache.storm.StormSubmitter
 import org.apache.storm.generated.StormTopology
 import org.apache.storm.topology.IComponent
 import org.apache.storm.topology.IRichSpout
+import org.slf4j.LoggerFactory
 
 open class StormBoot(
         private val createCustomSpout: (String, Map<String, Any?>) -> IRichSpout
@@ -15,6 +16,7 @@ open class StormBoot(
         private val createCustomBolt: (String, Map<String, Any?>) -> IComponent
         = { name, _ -> throw IllegalStateException("unsupported bolt name: $name") }
 ) {
+    private val logger = LoggerFactory.getLogger(StormBoot::class.java)
     private val builder = LazyTopoBuilder()
 
     fun buildTopology(config: Map<String, Any?>): StormTopology {
@@ -38,7 +40,11 @@ open class StormBoot(
         val cluster = LocalCluster()
         cluster.submitTopology(name, conf, topology)
 
-        Thread.sleep((config["lifetime_minute"] as Double).toLong() * 60 * 1000)
+        try {
+            Thread.sleep((config["lifetime_minute"] as Double).toLong() * 60 * 1000)
+        } catch (e: TypeCastException) {
+            logger.error("undefined \"lifetime_minute\" in config file!")
+        }
 
         cluster.shutdown()
     }
