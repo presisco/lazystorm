@@ -153,7 +153,11 @@ class LazyTopoBuilder {
         }
     }
 
-    fun getDataSourceLoader(name: String) = dataSourceLoaders[name]!!
+    fun getDataSourceLoader(name: String) = try {
+        dataSourceLoaders[name]!!
+    } catch (e: NullPointerException) {
+        throw IllegalStateException("undefined data source: $name in config")
+    }
 
     fun loadRedisConfig(configs: Map<String, Map<String, String>>) {
         configs.forEach { name, config ->
@@ -165,7 +169,11 @@ class LazyTopoBuilder {
         }
     }
 
-    fun getJedisPoolLoader(name: String) = jedisLoaders[name]!!
+    fun getJedisPoolLoader(name: String) = try {
+        jedisLoaders[name]!!
+    } catch (e: NullPointerException) {
+        throw IllegalStateException("undefined redis: $name in config")
+    }
 
     fun createLazyBolt(name: String, config: Map<String, Any>, createCustomBolt: (name: String, config: Map<String, Any>) -> IComponent): IComponent {
         with(config) {

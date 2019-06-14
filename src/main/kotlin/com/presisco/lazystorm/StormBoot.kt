@@ -20,8 +20,12 @@ open class StormBoot(
     private val builder = LazyTopoBuilder()
 
     fun buildTopology(config: Map<String, Any?>): StormTopology {
-        builder.loadDataSource(config["data_source"] as Map<String, Map<String, String>>)
-        builder.loadRedisConfig(config["redis"] as Map<String, Map<String, String>>)
+        if (config.containsKey("data_source")) {
+            builder.loadDataSource(config["data_source"] as Map<String, Map<String, String>>)
+        }
+        if (config.containsKey("redis")) {
+            builder.loadRedisConfig(config["redis"] as Map<String, Map<String, String>>)
+        }
         return builder.buildTopology(config["topology"] as Map<String, Map<String, Any>>, createCustomSpout, createCustomBolt)
     }
 
