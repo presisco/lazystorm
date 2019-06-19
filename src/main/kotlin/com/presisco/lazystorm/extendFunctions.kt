@@ -55,7 +55,7 @@ fun <Old, New> Map<String, Old>.mapValueToHashMap(valueMap: (value: Old) -> New)
     return hashMap
 }
 
-fun String.toSystemMs(format: DateTimeFormatter = com.presisco.lazyjdbc.defaultTimeStampFormat) = LocalDateTime.parse(this, format).toSystemMs()
+fun String.toSystemMs(format: DateTimeFormatter = defaultTimeStampFormat) = LocalDateTime.parse(this, format).toSystemMs()
 
 fun LocalDateTime.toSystemMs() = this.toInstant(OffsetDateTime.now().offset).toEpochMilli()
 
