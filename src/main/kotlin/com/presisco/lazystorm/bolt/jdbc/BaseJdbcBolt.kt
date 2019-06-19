@@ -54,7 +54,7 @@ abstract class BaseJdbcBolt<T> : LazyBasicBolt<T>() {
         dataSource = DataSourceManager.getConnector(dataSourceLoader)
     }
 
-    override fun prepare(stormConf: Map<*, *>, context: TopologyContext) {
+    override fun prepare(topoConf: MutableMap<String, Any>, context: TopologyContext) {
         initializeHikariCP()
     }
 }

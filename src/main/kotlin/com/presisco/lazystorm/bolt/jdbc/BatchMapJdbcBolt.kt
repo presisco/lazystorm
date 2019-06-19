@@ -11,7 +11,7 @@ abstract class BatchMapJdbcBolt : BatchJdbcBolt<Map<String, *>>() {
     @Transient
     protected lateinit var mapJdbcClient: MapJdbcClient
 
-    override fun prepare(stormConfig: MutableMap<*, *>, context: TopologyContext, outputCollector: OutputCollector) {
+    override fun prepare(stormConfig: MutableMap<String, Any>, context: TopologyContext, outputCollector: OutputCollector) {
         super.prepare(stormConfig, context, outputCollector)
         try {
             mapJdbcClient = MapJdbcClient(dataSource, queryTimeout, rollbackOnBatchFailure)

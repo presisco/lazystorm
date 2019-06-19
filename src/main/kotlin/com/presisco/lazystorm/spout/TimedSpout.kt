@@ -65,7 +65,7 @@ abstract class TimedSpout : BaseRichSpout() {
         }
     }
 
-    override fun open(config: MutableMap<*, *>, context: TopologyContext, collector: SpoutOutputCollector) {
+    override fun open(config: MutableMap<String, Any>, context: TopologyContext, collector: SpoutOutputCollector) {
         this.collector = collector
     }
 

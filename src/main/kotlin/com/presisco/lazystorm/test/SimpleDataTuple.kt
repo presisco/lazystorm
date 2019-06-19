@@ -70,7 +70,7 @@ open class SimpleDataTuple(
 
     override fun getShortByField(key: String) = dataMap[key] as Short
 
-    override fun getSourceGlobalStreamid() = null
+    override fun getContext() = null
 
     override fun fieldIndex(key: String) = keys.indexOf(key)
 

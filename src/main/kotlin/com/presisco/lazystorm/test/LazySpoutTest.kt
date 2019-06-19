@@ -38,7 +38,7 @@ abstract class LazySpoutTest(launcher: Launch, configPath: String, spoutName: St
 
     fun fakeEmptyPrepare(): SpoutOutputCollector {
         val context = Mockito.mock(TopologyContext::class.java)
-        val config = mutableMapOf<String, String>()
+        val config = mutableMapOf<String, Any>()
         val collector = fakeOutputCollector()
         spout.open(config, context, collector)
         return collector

@@ -16,7 +16,7 @@ abstract class JsonParseBolt : LazyBasicBolt<String>() {
 
     abstract fun initHelper(): SimpleHelper<*>
 
-    override fun prepare(stormConf: MutableMap<Any?, Any?>?, context: TopologyContext?) {
+    override fun prepare(stormConf: MutableMap<String, Any>, context: TopologyContext) {
         super.prepare(stormConf, context)
         jsonHelper = initHelper()
     }

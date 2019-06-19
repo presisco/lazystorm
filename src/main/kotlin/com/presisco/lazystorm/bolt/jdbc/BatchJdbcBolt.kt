@@ -81,7 +81,7 @@ abstract class BatchJdbcBolt<E> : LazyTickBolt<Any>() {
         dataSource = dataSourceLoader.getConnector()
     }
 
-    override fun prepare(stormConfig: MutableMap<*, *>, context: TopologyContext, outputCollector: OutputCollector) {
+    override fun prepare(stormConfig: MutableMap<String, Any>, context: TopologyContext, outputCollector: OutputCollector) {
         this.outputCollector = outputCollector
         dataQueue = ArrayBlockingQueue(batchSize)
         initializeHikariCP()

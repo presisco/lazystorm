@@ -38,7 +38,7 @@ abstract class LazyWindowedBoltTest(launcher: Launch, configPath: String, boltNa
 
     fun fakeEmptyPrepare(): OutputCollector {
         val context = Mockito.mock(TopologyContext::class.java)
-        val config = mutableMapOf<String, String>()
+        val config = mutableMapOf<String, Any>()
         val collector = fakeOutputCollector()
         bolt.prepare(config, context, collector)
         return collector

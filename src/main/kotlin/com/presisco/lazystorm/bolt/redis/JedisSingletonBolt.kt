@@ -41,7 +41,7 @@ abstract class JedisSingletonBolt<T> : LazyBasicBolt<T>() {
         keyName
     }
 
-    override fun prepare(stormConf: MutableMap<*, *>, context: TopologyContext) {
+    override fun prepare(stormConf: MutableMap<String, Any>, context: TopologyContext) {
         jedisPool = JedisPoolManager.getConnector(jedisPoolLoader)
     }
 
