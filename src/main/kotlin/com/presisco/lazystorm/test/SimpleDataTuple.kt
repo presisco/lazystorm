@@ -5,12 +5,25 @@ import org.apache.storm.tuple.Tuple
 
 open class SimpleDataTuple(
         private val keys: List<String>,
-        private val values: List<Any>,
+        private val values: List<*>,
         private val component: String = "unknown",
         private val stream: String = "default",
         private val task: Int = 1
 ) : Tuple {
-    private val dataMap = HashMap<String, Any>()
+    private val dataMap = HashMap<String, Any?>()
+
+    constructor(
+            vararg entries: Pair<String, *>,
+            component: String = "unknown",
+            stream: String = "default",
+            task: Int = 1
+    ) : this(
+            entries.map { it.first },
+            entries.map { it.second },
+            component,
+            stream,
+            task
+    )
 
     init {
         keys.forEachIndexed { index, key -> dataMap[key] = values[index] }

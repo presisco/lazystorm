@@ -49,8 +49,6 @@ abstract class Launch {
         }
     }
 
-    fun getDataSourceLoader(name: String) = stormBoot.getDataSourceLoader(name)
-
     fun launch(args: Array<String>) {
         parseArgs(args)
 

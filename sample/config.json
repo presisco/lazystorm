@@ -28,6 +28,13 @@
       "database": "db0"
     }
   },
+  "neo4j": {
+    "singleton": {
+      "uri": "bolt://10.129.148.133:7687",
+      "username": "neo4j",
+      "password": "root"
+    }
+  },
   "topology": {
     "kafka_spout": {
       "type": "spout",
@@ -225,6 +232,18 @@
       "upstream": "json_2_map_bolt",
       "redis": "singleton",
       "key": "some_one",
+      "parallelism": 1
+    },
+    "neo4j_create_node_bolt": {
+      "class": "com.presisco.lazystorm.bolt.neo4j.Neo4jCreateNodeBolt",
+      "upstream": "json_2_map_bolt",
+      "neo4j": "singleton",
+      "parallelism": 1
+    },
+    "neo4j_create_relation_bolt": {
+      "class": "com.presisco.lazystorm.bolt.neo4j.Neo4jCreateRelationBolt",
+      "upstream": "json_2_map_bolt",
+      "neo4j": "singleton",
       "parallelism": 1
     }
   }

@@ -5,7 +5,7 @@ import com.zaxxer.hikari.HikariDataSource
 import java.util.*
 import javax.sql.DataSource
 
-class DataSourceLoader : ConnectorLoader<DataSource, String>() {
+class DataSourceLoader : ConnectorLoader<DataSource>() {
 
     override fun getConnector(): DataSource {
         val props = Properties()

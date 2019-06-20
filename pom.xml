@@ -59,6 +59,7 @@
             <artifactId>mockito-core</artifactId>
             <version>2.22.0</version>
         </dependency>
+
         <dependency>
             <groupId>org.apache.storm</groupId>
             <artifactId>storm-client</artifactId>
@@ -67,7 +68,13 @@
               Use "provided" scope to keep storm out of the jar-with-dependencies
               For IntelliJ dev, intellij will load properly.
             -->
-            <scope>${provided.scope}</scope>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.storm</groupId>
+            <artifactId>storm-server</artifactId>
+            <version>${storm.version}</version>
         </dependency>
 
         <dependency>
@@ -89,17 +96,17 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.storm</groupId>
-            <artifactId>storm-server</artifactId>
-            <version>${storm.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>6.0.6</version>
             <scope>test</scope>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.neo4j.driver/neo4j-java-driver -->
+        <dependency>
+            <groupId>org.neo4j.driver</groupId>
+            <artifactId>neo4j-java-driver</artifactId>
+            <version>1.7.5</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc -->

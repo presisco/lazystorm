@@ -3,7 +3,7 @@ package com.presisco.lazystorm.connector
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.JedisPoolConfig
 
-class JedisPoolLoader : ConnectorLoader<JedisPool, String>() {
+class JedisPoolLoader : ConnectorLoader<JedisPool>() {
     override fun getConnector(): JedisPool {
         val defaultConfig = JedisPoolConfig()
         return JedisPool(

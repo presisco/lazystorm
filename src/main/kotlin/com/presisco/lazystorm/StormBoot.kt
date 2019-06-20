@@ -1,5 +1,6 @@
 package com.presisco.lazystorm
 
+import com.presisco.lazystorm.connector.LoaderManager
 import com.presisco.lazystorm.topology.LazyTopoBuilder
 import com.presisco.lazystorm.utils.Tools
 import org.apache.storm.Config
@@ -19,17 +20,21 @@ open class StormBoot(
     private val logger = LoggerFactory.getLogger(StormBoot::class.java)
     private val builder = LazyTopoBuilder()
 
-    fun buildTopology(config: Map<String, Any?>): StormTopology {
-        if (config.containsKey("data_source")) {
-            builder.loadDataSource(config["data_source"] as Map<String, Map<String, String>>)
+    fun prepareLoaders(config: Map<String, Any?>) {
+        setOf("neo4j", "data_source", "redis").forEach {
+            val loaderConfigs = if (config.containsKey(it)) {
+                config.getMap<String, HashMap<String, String>>(it)
+            } else {
+                mapOf()
+            }
+            LoaderManager.addType(it, loaderConfigs)
         }
-        if (config.containsKey("redis")) {
-            builder.loadRedisConfig(config["redis"] as Map<String, Map<String, String>>)
-        }
-        return builder.buildTopology(config["topology"] as Map<String, Map<String, Any>>, createCustomSpout, createCustomBolt)
     }
 
-    fun getDataSourceLoader(name: String) = builder.getDataSourceLoader(name)
+    fun buildTopology(config: Map<String, Any?>): StormTopology {
+        prepareLoaders(config)
+        return builder.buildTopology(config["topology"] as Map<String, Map<String, Any>>, createCustomSpout, createCustomBolt)
+    }
 
     fun localLaunch(config: Map<String, Any?>) {
         val topology = buildTopology(config)

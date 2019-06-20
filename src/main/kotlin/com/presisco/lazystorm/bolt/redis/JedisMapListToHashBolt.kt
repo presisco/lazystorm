@@ -12,8 +12,8 @@ class JedisMapListToHashBolt(private val keyField: String) : JedisSingletonBolt<
     @Transient
     private lateinit var mapHelper: MapHelper
 
-    override fun prepare(stormConf: MutableMap<*, *>, context: TopologyContext) {
-        super.prepare(stormConf, context)
+    override fun prepare(topoConf: Map<String, *>, context: TopologyContext) {
+        super.prepare(topoConf, context)
         mapHelper = MapHelper()
     }
 

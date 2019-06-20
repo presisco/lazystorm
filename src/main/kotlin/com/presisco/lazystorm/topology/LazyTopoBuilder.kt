@@ -1,7 +1,6 @@
 package com.presisco.lazystorm.topology
 
-import com.presisco.lazystorm.DATA_FIELD_NAME
-import com.presisco.lazystorm.DATA_FIELD_POS
+import com.presisco.lazystorm.*
 import com.presisco.lazystorm.bolt.*
 import com.presisco.lazystorm.bolt.jdbc.*
 import com.presisco.lazystorm.bolt.json.FormattedJson2ListBolt
@@ -10,11 +9,14 @@ import com.presisco.lazystorm.bolt.json.Json2ListBolt
 import com.presisco.lazystorm.bolt.json.Json2MapBolt
 import com.presisco.lazystorm.bolt.kafka.KafkaKeySwitchBolt
 import com.presisco.lazystorm.bolt.kafka.LazyJsonMapper
+import com.presisco.lazystorm.bolt.neo4j.Neo4jResourceBolt
 import com.presisco.lazystorm.bolt.redis.JedisMapListToHashBolt
 import com.presisco.lazystorm.bolt.redis.JedisMapToHashBolt
 import com.presisco.lazystorm.bolt.redis.JedisSingletonBolt
 import com.presisco.lazystorm.connector.DataSourceLoader
 import com.presisco.lazystorm.connector.JedisPoolLoader
+import com.presisco.lazystorm.connector.LoaderManager
+import com.presisco.lazystorm.lifecycle.Configurable
 import com.presisco.lazystorm.spout.TimedSpout
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.storm.generated.StormTopology
@@ -26,7 +28,6 @@ import org.apache.storm.topology.*
 import org.apache.storm.topology.base.BaseWindowedBolt
 import org.apache.storm.tuple.Fields
 import java.util.*
-import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
 class LazyTopoBuilder {
@@ -107,83 +108,15 @@ class LazyTopoBuilder {
         }
     }
 
-    private fun <T> Map<String, *>.byType(key: String): T = if (this.containsKey(key)) this[key] as T else throw IllegalStateException("$key not defined in config")
-
-    private fun Map<String, *>.getInt(key: String) = this.byType<Number>(key).toInt()
-
-    private fun Map<String, *>.getLong(key: String) = this.byType<Number>(key).toLong()
-
-    private fun Map<String, *>.getString(key: String) = this.byType<String>(key)
-
-    private fun Map<String, *>.getBoolean(key: String) = this.byType<Boolean>(key)
-
-    private fun <K, V> Map<String, *>.getMap(key: String) = this.byType<Map<K, V>>(key)
-
-    private fun <K, V> Map<String, *>.getHashMap(key: String) = this.byType<HashMap<K, V>>(key)
-
-    private fun <E> Map<String, *>.getList(key: String) = this.byType<List<E>>(key)
-
-    private fun <E> Map<String, *>.getArrayList(key: String) = this.byType<ArrayList<E>>(key)
-
-    private fun <K, V> Map<String, V>.mapKeyToHashMap(keyMap: (key: String) -> K): HashMap<K, V> {
-        val hashMap = hashMapOf<K, V>()
-        this.forEach { key, value -> hashMap[keyMap(key)] = value }
-        return hashMap
-    }
-
-    private fun <Old, New> Map<String, Old>.mapValueToHashMap(valueMap: (value: Old) -> New): HashMap<String, New> {
-        val hashMap = hashMapOf<String, New>()
-        this.forEach { key, value -> hashMap[key] = valueMap(value) }
-        return hashMap
-    }
-
-    private fun <T> collectionToArrayList(collection: Collection<T>): ArrayList<T> {
-        val arrayList = ArrayList<T>(collection.size)
-        arrayList.addAll(collection)
-        return arrayList
-    }
-
-    fun loadDataSource(configs: Map<String, Map<String, String>>) {
-        configs.forEach { name, config ->
-            dataSourceConfig[name] = HashMap()
-            config.forEach { key, value ->
-                dataSourceConfig[name]!![key] = value
-            }
-            dataSourceLoaders[name] = DataSourceLoader().setConfig(name, dataSourceConfig[name]!!) as DataSourceLoader
-        }
-    }
-
-    fun getDataSourceLoader(name: String) = try {
-        dataSourceLoaders[name]!!
-    } catch (e: NullPointerException) {
-        throw IllegalStateException("undefined data source: $name in config")
-    }
-
-    fun loadRedisConfig(configs: Map<String, Map<String, String>>) {
-        configs.forEach { name, config ->
-            jedisConfig[name] = HashMap()
-            config.forEach { key, value ->
-                jedisConfig[name]!![key] = value
-            }
-            jedisLoaders[name] = JedisPoolLoader().setConfig(name, jedisConfig[name]!!) as JedisPoolLoader
-        }
-    }
-
-    fun getJedisPoolLoader(name: String) = try {
-        jedisLoaders[name]!!
-    } catch (e: NullPointerException) {
-        throw IllegalStateException("undefined redis: $name in config")
-    }
-
     fun createLazyBolt(name: String, config: Map<String, Any>, createCustomBolt: (name: String, config: Map<String, Any>) -> IComponent): IComponent {
         with(config) {
-            val itemClass = getOrDefault("class", "unknown")
+            val itemClass = getOrDefault("class", "unknown") as String
             val srcPos = if (config.containsKey("srcPos")) getInt("srcPos") else DATA_FIELD_POS
             val srcField = if (config.containsKey("srcField")) getString("srcField") else DATA_FIELD_NAME
 
             val bolt = when (itemClass) {
                 /*             Edit              */
-                "MapRenameBolt" -> MapRenameBolt(getHashMap("rename"))
+                "MapRenameBolt" -> MapRenameBolt(getHashMap("rename") as HashMap<String, String>)
                 "MapStripBolt" -> MapStripBolt(getArrayList("strip"))
                 /*             Json              */
                 "Json2MapBolt" -> Json2MapBolt()
@@ -232,22 +165,6 @@ class LazyTopoBuilder {
                             .withTupleToKafkaMapper(mapper)
                 }
                 /*             JDBC              */
-                "BatchMapInsertJdbcBolt" -> BatchMapInsertJdbcBolt()
-                        .setDataSource(getDataSourceLoader(getString("data_source")))
-                        .setTableName(getString("table"))
-                        .setQueryTimeout(getInt("timeout"))
-                        .setRollbackOnFailure(getBoolean("rollback"))
-                        .setBatchSize(getInt("batch_size"))
-                        .setAck(getBoolean("ack"))
-                        .setTickIntervalSec(getInt("interval"))
-                "BatchMapReplaceJdbcBolt" -> BatchMapReplaceJdbcBolt()
-                        .setDataSource(getDataSourceLoader(getString("data_source")))
-                        .setTableName(getString("table"))
-                        .setQueryTimeout(getInt("timeout"))
-                        .setRollbackOnFailure(getBoolean("rollback"))
-                        .setBatchSize(getInt("batch_size"))
-                        .setAck(getBoolean("ack"))
-                        .setTickIntervalSec(getInt("interval"))
                 "SimpleInsertBolt", "MapInsertJdbcBolt" -> SimpleInsertBolt()
                 "SimpleReplaceBolt", "MapReplaceJdbcBolt" -> SimpleReplaceBolt()
                 "OracleSeqTagBolt" -> OracleSeqTagBolt(getString("tag"))
@@ -257,7 +174,14 @@ class LazyTopoBuilder {
                 "JedisMapToHashBolt" -> JedisMapToHashBolt()
                 /*         Debug        */
                 "TupleConsoleDumpBolt" -> TupleConsoleDumpBolt()
-                else -> createCustomBolt(name, config)
+                else -> {
+                    if (itemClass.contains(".")) {
+                        val boltClass = Class.forName(itemClass)
+                        boltClass.newInstance() as IComponent
+                    } else {
+                        createCustomBolt(name, config)
+                    }
+                }
             }
             when (bolt) {
                 is LazyBasicBolt<*> -> bolt.setSrcPos(srcPos).setSrcField(srcField)
@@ -279,34 +203,44 @@ class LazyTopoBuilder {
                     )
                 }
             }
-            when (bolt) {
-                is BaseJdbcBolt<*> -> {
-                    bolt.setDataSource(getDataSourceLoader(getString("data_source")))
-                            .setQueryTimeout(getInt("timeout"))
-                            .setRollbackOnFailure(getBoolean("rollback"))
-                    if (bolt is JdbcClientBolt<*>) {
-                        bolt.setEmitOnException(getBoolean("emit_on_failure"))
-                    }
-                    val keyword = if (bolt is OracleSeqTagBolt) {
-                        "sequence"
-                    } else {
-                        "table"
-                    }
+            try {
+                when (bolt) {
+                    is BaseJdbcBolt<*> -> {
+                        bolt.setDataSource(LoaderManager.getLoader("data_source", getString("data_source")))
+                                .setQueryTimeout(getInt("timeout"))
+                                .setRollbackOnFailure(getBoolean("rollback"))
+                        if (bolt is JdbcClientBolt<*>) {
+                            bolt.setEmitOnException(getBoolean("emit_on_failure"))
+                        }
+                        val keyword = if (bolt is OracleSeqTagBolt) {
+                            "sequence"
+                        } else {
+                            "table"
+                        }
 
-                    if (containsKey("stream_${keyword}_map")) {
-                        bolt.setStreamTableMap(getHashMap("stream_${keyword}_map"))
-                    } else {
-                        bolt.setTableName(getString(keyword))
+                        if (containsKey("stream_${keyword}_map")) {
+                            bolt.setStreamTableMap(getHashMap("stream_${keyword}_map") as HashMap<String, String>)
+                        } else {
+                            bolt.setTableName(getString(keyword))
+                        }
+                    }
+                    is JedisSingletonBolt<*> -> {
+                        bolt.setJedisPoolLoader(LoaderManager.getLoader("redis", getString("redis")))
+                        if (containsKey("stream_key_map")) {
+                            bolt.setStreamKeyMap(getHashMap("stream_key_map") as HashMap<String, String>)
+                        } else {
+                            bolt.setDataKey(getString("key"))
+                        }
+                    }
+                    is Neo4jResourceBolt<*> -> {
+                        bolt.connect(LoaderManager.getLoader("neo4j", getString("neo4j")))
                     }
                 }
-                is JedisSingletonBolt<*> -> {
-                    bolt.setJedisPoolLoader(getJedisPoolLoader(getString("redis")))
-                    if (containsKey("stream_key_map")) {
-                        bolt.setStreamKeyMap(getHashMap("stream_key_map"))
-                    } else {
-                        bolt.setDataKey(getString("key"))
-                    }
-                }
+            } catch (e: IllegalStateException) {
+                throw IllegalStateException("config for bolt: $name is bad, message: ${e.message}")
+            }
+            if (bolt is Configurable) {
+                bolt.configure(config)
             }
             return bolt
         }

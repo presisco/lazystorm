@@ -23,8 +23,8 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
         return this
     }
 
-    override fun prepare(stormConf: Map<*, *>, context: TopologyContext) {
-        super.prepare(stormConf, context)
+    override fun prepare(topoConf: Map<String, *>, context: TopologyContext) {
+        super.prepare(topoConf, context)
         try {
             jdbcClient = loadJdbcClient()
         } catch (e: Exception) {

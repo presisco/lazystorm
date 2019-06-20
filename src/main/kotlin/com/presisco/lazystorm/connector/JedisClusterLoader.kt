@@ -4,7 +4,7 @@ import redis.clients.jedis.HostAndPort
 import redis.clients.jedis.JedisCluster
 import redis.clients.jedis.JedisPoolConfig
 
-class JedisClusterLoader : ConnectorLoader<JedisCluster, String>() {
+class JedisClusterLoader : ConnectorLoader<JedisCluster>() {
     override fun getConnector(): JedisCluster {
         val hosts = config["hosts"]!!.split(",")
         val hostSet = mutableSetOf<HostAndPort>()

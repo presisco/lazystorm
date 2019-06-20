@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory
 import javax.sql.DataSource
 
 abstract class BaseJdbcBolt<T> : LazyBasicBolt<T>() {
-    private val logger = LoggerFactory.getLogger(BatchJdbcBolt::class.java)
+    private val logger = LoggerFactory.getLogger(BaseJdbcBolt::class.java)
 
     @Transient
     protected lateinit var dataSource: DataSource
@@ -54,7 +54,7 @@ abstract class BaseJdbcBolt<T> : LazyBasicBolt<T>() {
         dataSource = DataSourceManager.getConnector(dataSourceLoader)
     }
 
-    override fun prepare(topoConf: MutableMap<String, Any>, context: TopologyContext) {
+    override fun prepare(topoConf: Map<String, *>, context: TopologyContext) {
         initializeHikariCP()
     }
 }

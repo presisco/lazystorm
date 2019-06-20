@@ -1,10 +1,7 @@
 package com.presisco.lazystorm.test
 
 import com.presisco.gsonhelper.ConfigMapHelper
-import com.presisco.lazystorm.DATA_STREAM_NAME
-import com.presisco.lazystorm.FAILED_STREAM_NAME
-import com.presisco.lazystorm.Launch
-import com.presisco.lazystorm.STATS_STREAM_NAME
+import com.presisco.lazystorm.*
 import com.presisco.lazystorm.bolt.LazyBasicBolt
 import com.presisco.lazystorm.topology.LazyTopoBuilder
 import org.apache.storm.task.TopologyContext
@@ -18,8 +15,7 @@ abstract class LazyBasicBoltTest(launcher: Launch, configPath: String, boltName:
     init {
         val config = ConfigMapHelper().readConfigMap(configPath)
         val builder = LazyTopoBuilder()
-        builder.loadDataSource(config["data_source"] as Map<String, Map<String, String>>)
-        builder.loadRedisConfig(config["redis"] as Map<String, Map<String, String>>)
+        StormBoot().prepareLoaders(config)
 
         bolt = builder.createLazyBolt(boltName, (config["topology"] as Map<String, Map<String, Any>>)[boltName]!!, launcher.createCustomBolt) as LazyBasicBolt<*>
     }
