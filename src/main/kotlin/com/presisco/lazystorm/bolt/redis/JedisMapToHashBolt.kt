@@ -10,7 +10,7 @@ class JedisMapToHashBolt : JedisSingletonBolt<Map<String, *>>() {
     @Transient
     lateinit var fuzzyHelper: FuzzyHelper
 
-    override fun prepare(topoConf: Map<String, *>, context: TopologyContext) {
+    override fun prepare(topoConf: MutableMap<String, Any>?, context: TopologyContext?) {
         super.prepare(topoConf, context)
         fuzzyHelper = FuzzyHelper()
     }

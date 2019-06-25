@@ -34,7 +34,7 @@ abstract class LazyBasicBoltTest(launcher: Launch, configPath: String, boltName:
 
     fun fakeEmptyPrepare() {
         val context = Mockito.mock(TopologyContext::class.java)
-        val config = mapOf<String, String>()
+        val config = mutableMapOf<String, Any>()
         bolt.prepare(config, context)
     }
 
