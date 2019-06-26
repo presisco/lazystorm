@@ -44,18 +44,16 @@ open class StormBoot(
         val conf = Config()
         conf.setFallBackOnJavaSerialization(true)
         conf.setMaxSpoutPending((config["spout_max_pending"] as Double).toInt())
-
         conf.setMaxTaskParallelism(1)
-        val cluster = LocalCluster()
-        cluster.submitTopology(name, conf, topology)
 
         try {
-            Thread.sleep((config["lifetime_minute"] as Double).toLong() * 60 * 1000)
+            System.setProperty("storm.local.sleeptime", (config.getInt("lifetime_minute") * 60).toString())
         } catch (e: TypeCastException) {
             logger.error("undefined \"lifetime_minute\" in config file!")
         }
 
-        cluster.shutdown()
+        val cluster = LocalCluster()
+        cluster.submitTopology(name, conf, topology)
     }
 
     fun clusterUpload(config: Map<String, Any?>) {

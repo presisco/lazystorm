@@ -25,6 +25,8 @@ fun <E> Map<String, *>.getArrayList(key: String) = this.byType<ArrayList<E>>(key
 
 fun Map<String, *>.getListOfMap(key: String) = this[key] as List<Map<String, *>>
 
+fun Map<String, *>.getAsDouble(key: String) = this.byType<Double>(key)
+
 fun Map<String, *>.addFieldToNewMap(pair: Pair<String, Any?>): HashMap<String, Any?> {
     val newMap = hashMapOf(pair)
     newMap.putAll(this)
