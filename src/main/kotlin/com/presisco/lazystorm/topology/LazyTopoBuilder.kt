@@ -259,10 +259,20 @@ class LazyTopoBuilder {
                                 .setProcessingGuarantee(KafkaSpoutConfig.ProcessingGuarantee.AT_LEAST_ONCE)
                                 .build()
                 )
-                else -> createSpout(name, config)
+                else -> {
+                    if (itemClass.contains(".")) {
+                        val spoutClass = Class.forName(itemClass)
+                        spoutClass.newInstance() as IRichSpout
+                    } else {
+                        createSpout(name, config)
+                    }
+                }
             }
             when (spout) {
                 is TimedSpout -> spout.setIntervalSec(getLong("interval"))
+            }
+            if (spout is Configurable) {
+                spout.configure(config)
             }
             return spout
         }
