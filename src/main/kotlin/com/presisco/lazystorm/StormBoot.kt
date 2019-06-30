@@ -1,6 +1,5 @@
 package com.presisco.lazystorm
 
-import com.presisco.lazystorm.connector.LoaderManager
 import com.presisco.lazystorm.topology.LazyTopoBuilder
 import com.presisco.lazystorm.utils.Tools
 import org.apache.storm.Config
@@ -47,15 +46,16 @@ open class StormBoot(
         conf.setMessageTimeoutSecs((config["message_timeout_sec"] as Double).toInt())
 
         conf.setMaxTaskParallelism(1)
+        val cluster = LocalCluster()
+        cluster.submitTopology(name, conf, topology)
 
         try {
-            System.setProperty("storm.local.sleeptime", (config.getInt("lifetime_minute") * 60).toString())
+            Thread.sleep((config["lifetime_minute"] as Double).toLong() * 60 * 1000)
         } catch (e: TypeCastException) {
             logger.error("undefined \"lifetime_minute\" in config file!")
         }
 
-        val cluster = LocalCluster()
-        cluster.submitTopology(name, conf, topology)
+        cluster.shutdown()
     }
 
     fun clusterUpload(config: Map<String, Any?>) {
