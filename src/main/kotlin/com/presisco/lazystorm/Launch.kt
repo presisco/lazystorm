@@ -51,11 +51,16 @@ abstract class Launch {
 
     fun getDataSourceLoader(name: String) = stormBoot.getDataSourceLoader(name)
 
+    fun prepare(config: Map<String, Any?>) {
+        stormBoot = StormBoot(createCustomSpout, createCustomBolt)
+        stormBoot.loadDataSource(config)
+    }
+
     fun launch(args: Array<String>) {
         parseArgs(args)
 
-        stormBoot = StormBoot(createCustomSpout, createCustomBolt)
         val config = ConfigMapHelper().readConfigMap(cmdArgs["config"] as String)
+        prepare(config)
         when (cmdArgs["mode"]) {
             "local" -> stormBoot.localLaunch(config)
             "cluster" -> stormBoot.clusterUpload(config)

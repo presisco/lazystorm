@@ -17,15 +17,18 @@ open class StormBoot(
         = { name, _ -> throw IllegalStateException("unsupported bolt name: $name") }
 ) {
     private val logger = LoggerFactory.getLogger(StormBoot::class.java)
-    private val builder = LazyTopoBuilder()
+    val builder = LazyTopoBuilder()
 
-    fun buildTopology(config: Map<String, Any?>): StormTopology {
+    fun loadDataSource(config: Map<String, Any?>) {
         if (config.containsKey("data_source")) {
             builder.loadDataSource(config["data_source"] as Map<String, Map<String, String>>)
         }
         if (config.containsKey("redis")) {
             builder.loadRedisConfig(config["redis"] as Map<String, Map<String, String>>)
         }
+    }
+
+    fun buildTopology(config: Map<String, Any?>): StormTopology {
         return builder.buildTopology(config["topology"] as Map<String, Map<String, Any>>, createCustomSpout, createCustomBolt)
     }
 

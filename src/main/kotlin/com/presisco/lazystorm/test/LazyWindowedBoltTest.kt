@@ -6,7 +6,6 @@ import com.presisco.lazystorm.FAILED_STREAM_NAME
 import com.presisco.lazystorm.Launch
 import com.presisco.lazystorm.STATS_STREAM_NAME
 import com.presisco.lazystorm.bolt.LazyWindowedBolt
-import com.presisco.lazystorm.topology.LazyTopoBuilder
 import org.apache.storm.task.OutputCollector
 import org.apache.storm.task.TopologyContext
 import org.apache.storm.tuple.Values
@@ -17,11 +16,8 @@ abstract class LazyWindowedBoltTest(launcher: Launch, configPath: String, boltNa
 
     init {
         val config = ConfigMapHelper().readConfigMap(configPath)
-        val builder = LazyTopoBuilder()
-        builder.loadDataSource(config["data_source"] as Map<String, Map<String, String>>)
-        builder.loadRedisConfig(config["redis"] as Map<String, Map<String, String>>)
-
-        bolt = builder.createLazyBolt(boltName, (config["topology"] as Map<String, Map<String, Any>>)[boltName]!!, launcher.createCustomBolt) as LazyWindowedBolt<*>
+        launcher.prepare(config)
+        bolt = launcher.stormBoot.builder.createLazyBolt(boltName, (config["topology"] as Map<String, Map<String, Any>>)[boltName]!!, launcher.createCustomBolt) as LazyWindowedBolt<*>
     }
 
     protected fun OutputCollector.emitData(data: Any) {
