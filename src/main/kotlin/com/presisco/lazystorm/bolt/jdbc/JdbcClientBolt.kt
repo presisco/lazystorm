@@ -11,10 +11,12 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
     private val logger = LoggerFactory.getLogger(JdbcClientBolt::class.java)
 
     @Transient
-    private lateinit var jdbcClient: BaseJdbcClient<*>
+    protected lateinit var jdbcClient: BaseJdbcClient<*>
     private var emitOnException = true
 
     abstract fun loadJdbcClient(): BaseJdbcClient<*>
+
+    fun getJdbcClient() = jdbcClient as CLIENT
 
     abstract fun process(boltName: String, streamName: String, data: List<*>, table: String, client: CLIENT, collector: BasicOutputCollector): List<*>
 
