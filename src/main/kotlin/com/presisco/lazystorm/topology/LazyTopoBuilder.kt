@@ -261,7 +261,7 @@ class LazyTopoBuilder {
             }
             when (bolt) {
                 is LazyBasicBolt<*> -> bolt.setSrcPos(srcPos).setSrcField(srcField)
-                is LazyTickBolt<*> -> bolt.setSrcPos(srcPos).setSrcField(srcField)
+                is LazyTickBolt<*> -> bolt.setSrcPos(srcPos).setSrcField(srcField).setTickIntervalSec(config.getInt("tick_interval_sec"))
                 is LazyWindowedBolt<*> -> when (config["window_mode"]) {
                     "sliding_duration" -> bolt.withWindow(
                             BaseWindowedBolt.Duration.seconds(config.getInt("window_length")),
