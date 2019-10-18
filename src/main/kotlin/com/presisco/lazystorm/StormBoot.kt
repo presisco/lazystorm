@@ -44,6 +44,8 @@ open class StormBoot(
         val conf = Config()
         conf.setFallBackOnJavaSerialization(true)
         conf.setMaxSpoutPending((config["spout_max_pending"] as Double).toInt())
+        conf.setMessageTimeoutSecs((config["message_timeout_sec"] as Double).toInt())
+
         conf.setMaxTaskParallelism(1)
 
         try {

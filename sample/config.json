@@ -3,6 +3,7 @@
   "nimbus": "localhost",
   "workers": 1,
   "spout_max_pending": 100,
+  "message_timeout_sec": 30,
   "data_source": {
     "mysql": {
       "dataSourceClassName": "com.mysql.cj.jdbc.MysqlDataSource",
