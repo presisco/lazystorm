@@ -64,6 +64,8 @@ open class StormBoot(
             throw java.lang.IllegalStateException("bad topology name: $name")
         val conf = Config()
         conf.setMaxSpoutPending((config["spout_max_pending"] as Double).toInt())
+        conf.setMessageTimeoutSecs((config["message_timeout_sec"] as Double).toInt())
+
         conf.setNumWorkers((config["workers"] as Double).toInt())
         StormSubmitter.submitTopologyWithProgressBar(name, conf, topology)
     }
