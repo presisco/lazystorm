@@ -1,6 +1,7 @@
 package com.presisco.lazystorm
 
 import com.presisco.gsonhelper.ConfigMapHelper
+import com.presisco.lazystorm.topology.LazyTopoBuilder
 import org.apache.storm.topology.IComponent
 import org.apache.storm.topology.IRichSpout
 
