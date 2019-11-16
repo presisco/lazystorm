@@ -1,6 +1,7 @@
 package com.presisco.lazystorm
 
 import com.presisco.gsonhelper.ConfigMapHelper
+import com.presisco.lazystorm.topology.LazyTopoBuilder
 import org.apache.storm.topology.IComponent
 import org.apache.storm.topology.IRichSpout
 
@@ -56,11 +57,14 @@ abstract class Launch {
         stormBoot.loadDataSource(config)
     }
 
-    fun launch(args: Array<String>) {
+    fun launch(args: Array<String>, onConnectorCreated: ((builder: LazyTopoBuilder) -> Unit)? = null) {
         parseArgs(args)
 
         val config = ConfigMapHelper().readConfigMap(cmdArgs["config"] as String)
         prepare(config)
+        if (onConnectorCreated != null) {
+            onConnectorCreated(stormBoot.builder)
+        }
         when (cmdArgs["mode"]) {
             "local" -> stormBoot.localLaunch(config)
             "cluster" -> stormBoot.clusterUpload(config)
