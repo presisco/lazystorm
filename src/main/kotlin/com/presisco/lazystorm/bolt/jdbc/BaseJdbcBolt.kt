@@ -3,11 +3,12 @@ package com.presisco.lazystorm.bolt.jdbc
 import com.presisco.lazystorm.bolt.LazyBasicBolt
 import com.presisco.lazystorm.connector.DataSourceLoader
 import com.presisco.lazystorm.connector.DataSourceManager
+import com.presisco.lazystorm.lifecycle.Connectable
 import org.apache.storm.task.TopologyContext
 import org.slf4j.LoggerFactory
 import javax.sql.DataSource
 
-abstract class BaseJdbcBolt<T> : LazyBasicBolt<T>() {
+abstract class BaseJdbcBolt<T> : LazyBasicBolt<T>(), Connectable<DataSourceLoader> {
     private val logger = LoggerFactory.getLogger(BaseJdbcBolt::class.java)
 
     @Transient
@@ -19,9 +20,8 @@ abstract class BaseJdbcBolt<T> : LazyBasicBolt<T>() {
     protected var queryTimeout: Int = 2
     protected var rollbackOnBatchFailure: Boolean = true
 
-    fun setDataSource(loader: DataSourceLoader): BaseJdbcBolt<T> {
+    override fun connect(loader: DataSourceLoader) {
         dataSourceLoader = loader
-        return this
     }
 
     fun setTableName(name: String): BaseJdbcBolt<T> {

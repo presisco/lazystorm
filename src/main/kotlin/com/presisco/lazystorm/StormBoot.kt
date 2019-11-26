@@ -18,7 +18,7 @@ open class StormBoot(
         = { name, _ -> throw IllegalStateException("unsupported bolt name: $name") }
 ) {
     private val logger = LoggerFactory.getLogger(StormBoot::class.java)
-    private val builder = LazyTopoBuilder()
+    val builder = LazyTopoBuilder()
 
     fun prepareLoaders(config: Map<String, Any?>) {
         setOf("neo4j", "data_source", "redis").forEach {

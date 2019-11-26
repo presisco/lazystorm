@@ -3,14 +3,15 @@ package com.presisco.lazystorm.bolt.redis
 import com.presisco.lazystorm.bolt.LazyBasicBolt
 import com.presisco.lazystorm.connector.JedisPoolLoader
 import com.presisco.lazystorm.connector.JedisPoolManager
+import com.presisco.lazystorm.lifecycle.Connectable
 import org.apache.storm.task.TopologyContext
 import org.slf4j.LoggerFactory
-import redis.clients.jedis.JedisCommands
+import redis.clients.jedis.Jedis
 import redis.clients.jedis.JedisPool
 import java.io.Closeable
 import java.io.IOException
 
-abstract class JedisSingletonBolt<T> : LazyBasicBolt<T>() {
+abstract class JedisSingletonBolt<T> : LazyBasicBolt<T>(), Connectable<JedisPoolLoader> {
     private val logger = LoggerFactory.getLogger(JedisSingletonBolt::class.java)
 
     protected lateinit var jedisPoolLoader: JedisPoolLoader
@@ -20,9 +21,8 @@ abstract class JedisSingletonBolt<T> : LazyBasicBolt<T>() {
     @Transient
     protected lateinit var jedisPool: JedisPool
 
-    fun setJedisPoolLoader(loader: JedisPoolLoader): JedisSingletonBolt<T> {
-        jedisPoolLoader = loader
-        return this
+    override fun connect(loader: JedisPoolLoader) {
+        this.jedisPoolLoader = loader
     }
 
     fun setDataKey(key: String): JedisSingletonBolt<T> {
@@ -47,7 +47,7 @@ abstract class JedisSingletonBolt<T> : LazyBasicBolt<T>() {
 
     fun getCommand() = jedisPool.resource!!
 
-    fun closeCommand(cmd: JedisCommands?) {
+    fun closeCommand(cmd: Jedis?) {
         cmd ?: return
         try {
             (cmd as Closeable).close()

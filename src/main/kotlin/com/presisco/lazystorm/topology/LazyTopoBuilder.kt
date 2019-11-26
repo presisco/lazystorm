@@ -9,14 +9,16 @@ import com.presisco.lazystorm.bolt.json.Json2ListBolt
 import com.presisco.lazystorm.bolt.json.Json2MapBolt
 import com.presisco.lazystorm.bolt.kafka.KafkaKeySwitchBolt
 import com.presisco.lazystorm.bolt.kafka.LazyJsonMapper
-import com.presisco.lazystorm.bolt.neo4j.Neo4jResourceBolt
 import com.presisco.lazystorm.bolt.redis.JedisMapListToHashBolt
 import com.presisco.lazystorm.bolt.redis.JedisMapToHashBolt
 import com.presisco.lazystorm.bolt.redis.JedisSingletonBolt
 import com.presisco.lazystorm.connector.DataSourceLoader
 import com.presisco.lazystorm.connector.JedisPoolLoader
 import com.presisco.lazystorm.connector.LoaderManager
+import com.presisco.lazystorm.connector.Neo4jLoader
 import com.presisco.lazystorm.lifecycle.Configurable
+import com.presisco.lazystorm.lifecycle.Connectable
+import com.presisco.lazystorm.lifecycle.FlexStreams
 import com.presisco.lazystorm.spout.TimedSpout
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.storm.generated.StormTopology
@@ -31,13 +33,6 @@ import java.util.*
 import kotlin.collections.HashMap
 
 class LazyTopoBuilder {
-
-    private val dataSourceConfig = HashMap<String, HashMap<String, String>>()
-    private val dataSourceLoaders = HashMap<String, DataSourceLoader>()
-
-    private val jedisConfig = HashMap<String, HashMap<String, String>>()
-    private val jedisLoaders = HashMap<String, JedisPoolLoader>()
-
     private val streamDefs = HashMap<String, ArrayList<String>>()
 
     private fun setGrouping(
@@ -108,6 +103,69 @@ class LazyTopoBuilder {
         }
     }
 
+    fun assembleWindowBolt(bolt: LazyWindowedBolt<*>, name: String, config: Map<String, Any>) {
+        when (config["window_mode"]) {
+            "sliding_duration" -> bolt.withWindow(
+                    BaseWindowedBolt.Duration.seconds(config.getInt("window_length")),
+                    BaseWindowedBolt.Duration.seconds(config.getInt("sliding_interval"))
+            )
+            "tumbling_duration" -> bolt.withTumblingWindow(
+                    BaseWindowedBolt.Duration.seconds(config.getInt("window_length"))
+            )
+            "sliding_count" -> bolt.withWindow(
+                    BaseWindowedBolt.Count.of(config.getInt("window_length")),
+                    BaseWindowedBolt.Count.of(config.getInt("sliding_interval"))
+            )
+            "tumbling_count" -> bolt.withTumblingWindow(
+                    BaseWindowedBolt.Count.of(config.getInt("window_length"))
+            )
+        }
+    }
+
+    fun assembleConnectable(bolt: IComponent, name: String, config: Map<String, Any>) {
+        with(config) {
+            val connectable = bolt as Connectable<*>
+            if (containsKey("data_source")) {
+                (connectable as Connectable<DataSourceLoader>).connect(LoaderManager.getLoader("data_source", getString("data_source")))
+            }
+            if (containsKey("redis")) {
+                (connectable as Connectable<JedisPoolLoader>).connect(LoaderManager.getLoader("redis", getString("redis")))
+            }
+            if (containsKey("neo4j")) {
+                (connectable as Connectable<Neo4jLoader>).connect(LoaderManager.getLoader("neo4j", getString("neo4j")))
+            }
+            when (bolt) {
+                is BaseJdbcBolt<*> -> {
+                    bolt.setQueryTimeout(getInt("timeout"))
+                            .setRollbackOnFailure(getBoolean("rollback"))
+                    if (bolt is JdbcClientBolt<*>) {
+                        bolt.setEmitOnException(getBoolean("emit_on_failure"))
+                    }
+                    val keyword = if (bolt is OracleSeqTagBolt) {
+                        "sequence"
+                    } else {
+                        "table"
+                    }
+
+                    if (containsKey("stream_${keyword}_map")) {
+                        bolt.setStreamTableMap(getHashMap("stream_${keyword}_map") as HashMap<String, String>)
+                    } else if (containsKey(keyword)) {
+                        bolt.setTableName(getString(keyword))
+                    }
+                }
+                is JedisSingletonBolt<*> -> {
+                    if (containsKey("stream_key_map")) {
+                        bolt.setStreamKeyMap(getHashMap("stream_key_map") as HashMap<String, String>)
+                    }
+                    if (containsKey("key")) {
+                        bolt.setDataKey(getString("key"))
+                    }
+                }
+            }
+            return
+        }
+    }
+
     fun createLazyBolt(name: String, config: Map<String, Any>, createCustomBolt: (name: String, config: Map<String, Any>) -> IComponent): IComponent {
         with(config) {
             val itemClass = getOrDefault("class", "unknown") as String
@@ -175,10 +233,10 @@ class LazyTopoBuilder {
                 /*         Debug        */
                 "TupleConsoleDumpBolt" -> TupleConsoleDumpBolt()
                 else -> {
-                    if (itemClass.contains(".")) {
+                    try {
                         val boltClass = Class.forName(itemClass)
                         boltClass.newInstance() as IComponent
-                    } else {
+                    } catch (e: ClassNotFoundException) {
                         createCustomBolt(name, config)
                     }
                 }
@@ -186,62 +244,17 @@ class LazyTopoBuilder {
             when (bolt) {
                 is LazyBasicBolt<*> -> bolt.setSrcPos(srcPos).setSrcField(srcField)
                 is LazyTickBolt<*> -> bolt.setSrcPos(srcPos).setSrcField(srcField).setTickIntervalSec(config.getInt("tick_interval_sec"))
-                is LazyWindowedBolt<*> -> when (config["window_mode"]) {
-                    "sliding_duration" -> bolt.withWindow(
-                            BaseWindowedBolt.Duration.seconds(config.getInt("window_length")),
-                            BaseWindowedBolt.Duration.seconds(config.getInt("sliding_interval"))
-                    )
-                    "tumbling_duration" -> bolt.withTumblingWindow(
-                            BaseWindowedBolt.Duration.seconds(config.getInt("window_length"))
-                    )
-                    "sliding_count" -> bolt.withWindow(
-                            BaseWindowedBolt.Count.of(config.getInt("window_length")),
-                            BaseWindowedBolt.Count.of(config.getInt("sliding_interval"))
-                    )
-                    "tumbling_count" -> bolt.withTumblingWindow(
-                            BaseWindowedBolt.Count.of(config.getInt("window_length"))
-                    )
-                }
+                is LazyWindowedBolt<*> -> assembleWindowBolt(bolt, name, config)
             }
-            try {
-                when (bolt) {
-                    is BaseJdbcBolt<*> -> {
-                        bolt.setDataSource(LoaderManager.getLoader("data_source", getString("data_source")))
-                                .setQueryTimeout(getInt("timeout"))
-                                .setRollbackOnFailure(getBoolean("rollback"))
-                        if (bolt is JdbcClientBolt<*>) {
-                            bolt.setEmitOnException(getBoolean("emit_on_failure"))
-                        }
-                        val keyword = if (bolt is OracleSeqTagBolt) {
-                            "sequence"
-                        } else {
-                            "table"
-                        }
 
-                        if (containsKey("stream_${keyword}_map")) {
-                            bolt.setStreamTableMap(getHashMap("stream_${keyword}_map") as HashMap<String, String>)
-                        } else {
-                            bolt.setTableName(getString(keyword))
-                        }
-                    }
-                    is JedisSingletonBolt<*> -> {
-                        bolt.setJedisPoolLoader(LoaderManager.getLoader("redis", getString("redis")))
-                        if (containsKey("stream_key_map")) {
-                            bolt.setStreamKeyMap(getHashMap("stream_key_map") as HashMap<String, String>)
-                        } else {
-                            bolt.setDataKey(getString("key"))
-                        }
-                    }
-                    is Neo4jResourceBolt<*> -> {
-                        bolt.connect(LoaderManager.getLoader("neo4j", getString("neo4j")))
-                    }
-                }
-            } catch (e: IllegalStateException) {
-                throw IllegalStateException("config for bolt: $name is bad, message: ${e.message}")
+            if (bolt is Connectable<*>) {
+                assembleConnectable(bolt, name, config)
             }
+
             if (bolt is Configurable) {
                 bolt.configure(config)
             }
+
             return bolt
         }
     }
@@ -252,12 +265,13 @@ class LazyTopoBuilder {
             val spout = when (itemClass) {
                 "KafkaSpout" -> {
                     val spoutConfig = KafkaSpoutConfig.Builder<String, String>(
-                        getString("brokers"),
-                        getString("topic")
+                            getString("brokers"),
+                            getString("topic")
                     )
-                        .setProp(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, getString("key.deserializer"))
-                        .setProp(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, getString("value.deserializer"))
-                        .setProcessingGuarantee(KafkaSpoutConfig.ProcessingGuarantee.AT_LEAST_ONCE)
+                            .setProp(ConsumerConfig.GROUP_ID_CONFIG, getString("group.id"))
+                            .setProp(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, getString("key.deserializer"))
+                            .setProp(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, getString("value.deserializer"))
+                            .setProcessingGuarantee(KafkaSpoutConfig.ProcessingGuarantee.AT_LEAST_ONCE)
                     if (config.containsKey("group.id")) {
                         spoutConfig.setProp("group.id", config.getString("group.id"))
                     }
@@ -274,6 +288,9 @@ class LazyTopoBuilder {
             }
             when (spout) {
                 is TimedSpout -> spout.setIntervalSec(getLong("interval"))
+            }
+            if (spout is Connectable<*>) {
+                assembleConnectable(spout, name, config)
             }
             if (spout is Configurable) {
                 spout.configure(config)
@@ -363,9 +380,9 @@ class LazyTopoBuilder {
                             else
                                 listOf()
 
-                            if (bolt is LazyBasicBolt<*>) {
+                            if (bolt is FlexStreams) {
                                 if (containsKey("streams")) {
-                                    bolt.customDataStreams = getArrayList("streams")
+                                    bolt.addStreams(getArrayList("streams"))
                                 } else if (containsKey("keep_stream")
                                         && getBoolean("keep_stream")
                                 ) {
@@ -374,7 +391,7 @@ class LazyTopoBuilder {
                                     }
                                     streamDefs[name]
                                             ?: throw IllegalStateException("upstream $upstream for $name does not define output streams")
-                                    bolt.customDataStreams = streamDefs[name]!!
+                                    bolt.addStreams(streamDefs[name]!!)
                                 }
                             }
 

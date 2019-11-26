@@ -14,8 +14,8 @@ abstract class Neo4jResourceBolt<T> : LazyBasicBolt<T>(), Connectable<Neo4jLoade
 
     private lateinit var loader: Neo4jLoader
 
-    override fun connect(connector: Neo4jLoader) {
-        loader = connector
+    override fun connect(loader: Neo4jLoader) {
+        this.loader = loader
     }
 
     override fun prepare(topoConf: MutableMap<String, Any>?, context: TopologyContext?) {

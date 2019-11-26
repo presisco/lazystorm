@@ -21,24 +21,6 @@ abstract class Launch {
 
     lateinit var stormBoot: StormBoot
 
-    protected fun <T> Map<String, *>.byType(key: String): T = if (this.containsKey(key)) this[key] as T else throw IllegalStateException("$key not defined in config")
-
-    protected fun Map<String, *>.getInt(key: String) = this.byType<Number>(key).toInt()
-
-    protected fun Map<String, *>.getLong(key: String) = this.byType<Number>(key).toLong()
-
-    protected fun Map<String, *>.getDouble(key: String) = this.byType<Double>(key)
-
-    protected fun Map<String, *>.getString(key: String) = this.byType<String>(key)
-
-    protected fun Map<String, *>.getBoolean(key: String) = this.byType<Boolean>(key)
-
-    protected fun <K, V> Map<String, *>.getHashMap(key: String) = this.byType<java.util.HashMap<K, V>>(key)
-
-    protected fun <E> Map<String, *>.getList(key: String) = this.byType<List<E>>(key)
-
-    protected fun <E> Map<String, *>.getArrayList(key: String) = this.byType<ArrayList<E>>(key)
-
     /**
      * 解析命令行运行参数
      */
@@ -50,11 +32,9 @@ abstract class Launch {
         }
     }
 
-    fun getDataSourceLoader(name: String) = stormBoot.getDataSourceLoader(name)
-
     fun prepare(config: Map<String, Any?>) {
         stormBoot = StormBoot(createCustomSpout, createCustomBolt)
-        stormBoot.loadDataSource(config)
+        stormBoot.prepareLoaders(config)
     }
 
     fun launch(args: Array<String>, onConnectorCreated: ((builder: LazyTopoBuilder) -> Unit)? = null) {
