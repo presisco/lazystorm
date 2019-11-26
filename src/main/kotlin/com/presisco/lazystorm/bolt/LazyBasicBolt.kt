@@ -60,11 +60,7 @@ abstract class LazyBasicBolt<out T>(
 
     protected fun BasicOutputCollector.emitStats(data: Any, time: String) = this.emit(STATS_STREAM_NAME, Values(data, time))
 
-    protected fun BasicOutputCollector.emitDataToStreams(sourceStream: String, data: Any) = if (sourceStream in customDataStreams) {
-        this.emit(sourceStream, Values(data))
-    } else {
-        this.emitData(data)
-    }
+    protected fun BasicOutputCollector.emitDataToStreams(stream: String, data: Any) = this.emit(stream, Values(data))
 
     override fun declareOutputFields(declarer: OutputFieldsDeclarer) {
         declarer.declareStream(

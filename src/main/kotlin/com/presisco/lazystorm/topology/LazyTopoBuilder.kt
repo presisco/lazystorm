@@ -269,6 +269,8 @@ class LazyTopoBuilder {
                             getString("topic")
                     )
                             .setProp(ConsumerConfig.GROUP_ID_CONFIG, getString("group.id"))
+                            .setProp(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, getString("request.timeout.ms"))
+                            .setProp(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, getString("fetch.max.wait.ms"))
                             .setProp(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, getString("key.deserializer"))
                             .setProp(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, getString("value.deserializer"))
                             .setProcessingGuarantee(KafkaSpoutConfig.ProcessingGuarantee.AT_LEAST_ONCE)

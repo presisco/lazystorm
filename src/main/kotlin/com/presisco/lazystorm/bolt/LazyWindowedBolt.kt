@@ -58,11 +58,7 @@ abstract class LazyWindowedBolt<T>(
 
     protected fun emitStats(data: Any, time: String) = collector.emit(STATS_STREAM_NAME, Values(data, time))
 
-    protected fun emitDataToStreams(sourceStream: String, data: Any) = if (sourceStream in customDataStreams) {
-        collector.emit(sourceStream, Values(data))
-    } else {
-        emitData(data)
-    }
+    protected fun emitDataToStreams(stream: String, data: Any) = collector.emit(stream, Values(data))
 
     @Transient
     protected lateinit var collector: OutputCollector
