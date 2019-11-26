@@ -1,6 +1,7 @@
 package com.presisco.lazystorm.bolt
 
 import com.presisco.lazystorm.*
+import com.presisco.lazystorm.lifecycle.FlexStreams
 import org.apache.storm.task.TopologyContext
 import org.apache.storm.topology.BasicOutputCollector
 import org.apache.storm.topology.OutputFieldsDeclarer
@@ -13,10 +14,14 @@ import org.slf4j.LoggerFactory
 abstract class LazyBasicBolt<out T>(
         private var srcPos: Int = DATA_FIELD_POS,
         private var srcField: String = DATA_FIELD_NAME
-) : BaseBasicBolt() {
+) : BaseBasicBolt(), FlexStreams {
     private val logger = LoggerFactory.getLogger(LazyBasicBolt::class.java)
 
-    var customDataStreams = ArrayList<String>()
+    val customDataStreams = ArrayList<String>()
+
+    override fun addStreams(streams: List<String>) {
+        customDataStreams.addAll(streams)
+    }
 
     fun setSrcPos(pos: Int): LazyBasicBolt<T> {
         srcPos = pos

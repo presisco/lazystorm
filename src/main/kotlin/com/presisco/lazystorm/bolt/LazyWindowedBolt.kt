@@ -1,6 +1,7 @@
 package com.presisco.lazystorm.bolt
 
 import com.presisco.lazystorm.*
+import com.presisco.lazystorm.lifecycle.FlexStreams
 import org.apache.storm.task.OutputCollector
 import org.apache.storm.task.TopologyContext
 import org.apache.storm.topology.OutputFieldsDeclarer
@@ -14,10 +15,13 @@ import org.slf4j.LoggerFactory
 abstract class LazyWindowedBolt<T>(
         private var srcPos: Int = DATA_FIELD_POS,
         private var srcField: String = DATA_FIELD_NAME
-) : BaseWindowedBolt() {
+) : BaseWindowedBolt(), FlexStreams {
     private val logger = LoggerFactory.getLogger(LazyWindowedBolt::class.java)
+    private val customDataStreams = ArrayList<String>()
 
-    var customDataStreams = ArrayList<String>()
+    override fun addStreams(streams: List<String>) {
+        customDataStreams.addAll(streams)
+    }
 
     fun setSrcPos(pos: Int): LazyWindowedBolt<T> {
         srcPos = pos
