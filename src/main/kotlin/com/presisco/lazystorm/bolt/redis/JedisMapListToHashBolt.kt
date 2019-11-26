@@ -12,7 +12,7 @@ class JedisMapListToHashBolt(private val keyField: String) : JedisSingletonBolt<
     @Transient
     private lateinit var mapHelper: MapHelper
 
-    override fun prepare(topoConf: Map<String, *>, context: TopologyContext) {
+    override fun prepare(topoConf: MutableMap<String, Any>?, context: TopologyContext?) {
         super.prepare(topoConf, context)
         mapHelper = MapHelper()
     }

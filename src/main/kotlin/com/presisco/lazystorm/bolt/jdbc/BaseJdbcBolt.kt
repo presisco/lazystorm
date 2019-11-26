@@ -14,7 +14,7 @@ abstract class BaseJdbcBolt<T> : LazyBasicBolt<T>() {
     protected lateinit var dataSource: DataSource
 
     protected lateinit var dataSourceLoader: DataSourceLoader
-    protected var tableName: String? = null
+    protected lateinit var tableName: String
     protected var streamTableMap = hashMapOf<String, String>()
     protected var queryTimeout: Int = 2
     protected var rollbackOnBatchFailure: Boolean = true
@@ -37,7 +37,7 @@ abstract class BaseJdbcBolt<T> : LazyBasicBolt<T>() {
     protected fun getTable(stream: String) = if (streamTableMap.containsKey(stream)) {
         streamTableMap[stream]!!
     } else {
-        tableName!!
+        tableName
     }
 
     fun setQueryTimeout(timeout: Int): BaseJdbcBolt<T> {
@@ -54,7 +54,7 @@ abstract class BaseJdbcBolt<T> : LazyBasicBolt<T>() {
         dataSource = DataSourceManager.getConnector(dataSourceLoader)
     }
 
-    override fun prepare(topoConf: Map<String, *>, context: TopologyContext) {
+    override fun prepare(topoConf: MutableMap<String, Any>?, context: TopologyContext?) {
         initializeHikariCP()
     }
 }

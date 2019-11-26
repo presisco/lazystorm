@@ -35,7 +35,7 @@
         <dependency>
             <groupId>com.presisco</groupId>
             <artifactId>lazyjdbc</artifactId>
-            <version>1.2.1</version>
+            <version>1.2.2</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -75,6 +75,7 @@
             <groupId>org.apache.storm</groupId>
             <artifactId>storm-server</artifactId>
             <version>${storm.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>

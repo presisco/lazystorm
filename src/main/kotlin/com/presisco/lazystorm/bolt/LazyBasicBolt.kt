@@ -1,6 +1,7 @@
 package com.presisco.lazystorm.bolt
 
 import com.presisco.lazystorm.*
+import org.apache.storm.task.TopologyContext
 import org.apache.storm.topology.BasicOutputCollector
 import org.apache.storm.topology.OutputFieldsDeclarer
 import org.apache.storm.topology.base.BaseBasicBolt
@@ -31,6 +32,12 @@ abstract class LazyBasicBolt<out T>(
         tuple.getValue(srcPos) as T
     else
         tuple.getValueByField(srcField) as T
+
+    protected fun Tuple.toData(): T = this.getValueByField(DATA_FIELD_NAME) as T
+
+    override fun prepare(topoConf: MutableMap<String, Any>?, context: TopologyContext?) {
+        logger.debug("LazyBasicBolt prepared!")
+    }
 
     fun getArrayListInput(tuple: Tuple): ArrayList<out T> {
         val fuzzy = getInput(tuple)

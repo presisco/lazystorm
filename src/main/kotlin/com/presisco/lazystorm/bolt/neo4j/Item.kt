@@ -13,7 +13,13 @@ data class Item(
         val content = props.entries.joinToString(separator = ",\n") {
             val valueText = when (it.value) {
                 is Number -> it.value.toString()
-                else -> "'${it.value}'"
+                else -> {
+                    if (it.value.toString().startsWith("$")) {
+                        it.value.toString()
+                    } else {
+                        "'${it.value}'"
+                    }
+                }
             }
             "${it.key}: $valueText"
         }

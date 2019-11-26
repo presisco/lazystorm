@@ -62,7 +62,7 @@ class LazyTopoBuilder {
 
         with(declarer) {
             when (grouping) {
-                "fields" -> fieldsGrouping(boltName, Fields(paramList))
+                "fields" -> fieldsGrouping(boltName, Fields(*paramList.toTypedArray()))
                 //"all" -> allGrouping(boltName)
                 //"global" -> globalGrouping(boltName)
                 "none" -> noneGrouping(boltName)
@@ -97,7 +97,7 @@ class LazyTopoBuilder {
 
         with(declarer) {
             when (grouping) {
-                "fields" -> fieldsGrouping(boltName, streamName, Fields(paramList))
+                "fields" -> fieldsGrouping(boltName, streamName, Fields(*paramList.toTypedArray()))
                 //"all" -> allGrouping(boltName, streamName)
                 //"global" -> globalGrouping(boltName, streamName)
                 "none" -> noneGrouping(boltName, streamName)
@@ -250,19 +250,33 @@ class LazyTopoBuilder {
         with(config) {
             val itemClass = getString("class")
             val spout = when (itemClass) {
-                "KafkaSpout" -> KafkaSpout(
-                        KafkaSpoutConfig.Builder<String, String>(
-                                getString("brokers"),
-                                getString("topic")
-                        ).setProp(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, getString("key.deserializer"))
-                                .setProp(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, getString("value.deserializer"))
-                                .setProcessingGuarantee(KafkaSpoutConfig.ProcessingGuarantee.AT_LEAST_ONCE)
-                                .build()
-                )
-                else -> createSpout(name, config)
+                "KafkaSpout" -> {
+                    val spoutConfig = KafkaSpoutConfig.Builder<String, String>(
+                        getString("brokers"),
+                        getString("topic")
+                    )
+                        .setProp(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, getString("key.deserializer"))
+                        .setProp(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, getString("value.deserializer"))
+                        .setProcessingGuarantee(KafkaSpoutConfig.ProcessingGuarantee.AT_LEAST_ONCE)
+                    if (config.containsKey("group.id")) {
+                        spoutConfig.setProp("group.id", config.getString("group.id"))
+                    }
+                    KafkaSpout(spoutConfig.build())
+                }
+                else -> {
+                    if (itemClass.contains(".")) {
+                        val spoutClass = Class.forName(itemClass)
+                        spoutClass.newInstance() as IRichSpout
+                    } else {
+                        createSpout(name, config)
+                    }
+                }
             }
             when (spout) {
                 is TimedSpout -> spout.setIntervalSec(getLong("interval"))
+            }
+            if (spout is Configurable) {
+                spout.configure(config)
             }
             return spout
         }
