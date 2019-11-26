@@ -8,9 +8,6 @@ class SimpleTupleWindow(
         private val expired: MutableList<Tuple> = mutableListOf(),
         private val new: MutableList<Tuple> = mutableListOf()
 ) : TupleWindow {
-    override fun getEndTimestamp() = 1L
-
-    override fun getStartTimestamp() = 0L
 
     override fun getNew(): MutableList<Tuple> = new
 

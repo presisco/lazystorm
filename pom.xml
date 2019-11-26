@@ -6,7 +6,7 @@
 
     <groupId>com.presisco</groupId>
     <artifactId>lazystorm</artifactId>
-    <version>1.6.2</version>
+    <version>1.6.3</version>
     <packaging>jar</packaging>
 
     <name>com.presisco.lazystorm</name>
@@ -15,8 +15,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <kotlin.version>1.2.71</kotlin.version>
         <junit.version>4.12</junit.version>
-        <storm.version>1.2.2</storm.version>
-        <kafka.version>2.0.0</kafka.version>
+        <storm.version>1.2.3</storm.version>
+        <kafka.version>2.3.1</kafka.version>
         <java.version>1.8</java.version>
     </properties>
 

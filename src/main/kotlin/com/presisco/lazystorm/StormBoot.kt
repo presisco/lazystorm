@@ -1,5 +1,6 @@
 package com.presisco.lazystorm
 
+import com.presisco.lazystorm.connector.LoaderManager
 import com.presisco.lazystorm.topology.LazyTopoBuilder
 import com.presisco.lazystorm.utils.Tools
 import org.apache.storm.Config

@@ -40,7 +40,7 @@ abstract class LazyBasicBolt<out T>(
 
     protected fun Tuple.toData(): T = this.getValueByField(DATA_FIELD_NAME) as T
 
-    override fun prepare(topoConf: MutableMap<String, Any>?, context: TopologyContext?) {
+    override fun prepare(stormConf: MutableMap<Any?, Any?>?, context: TopologyContext?) {
         logger.debug("LazyBasicBolt prepared!")
     }
 

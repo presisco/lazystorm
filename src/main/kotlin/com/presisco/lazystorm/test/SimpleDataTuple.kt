@@ -1,5 +1,6 @@
 package com.presisco.lazystorm.test
 
+import org.apache.storm.generated.GlobalStreamId
 import org.apache.storm.tuple.Fields
 import org.apache.storm.tuple.Tuple
 
@@ -51,7 +52,9 @@ open class SimpleDataTuple(
 
     override fun getFloat(index: Int) = values[index] as Float
 
-    override fun getSourceGlobalStreamId() = null
+    override fun getSourceGlobalStreamId() = sourceGlobalStreamid
+
+    override fun getSourceGlobalStreamid() = GlobalStreamId("bolt", "stream")
 
     override fun getSourceComponent() = component
 
@@ -82,8 +85,6 @@ open class SimpleDataTuple(
     override fun getValueByField(key: String) = dataMap[key]
 
     override fun getShortByField(key: String) = dataMap[key] as Short
-
-    override fun getContext() = null
 
     override fun fieldIndex(key: String) = keys.indexOf(key)
 

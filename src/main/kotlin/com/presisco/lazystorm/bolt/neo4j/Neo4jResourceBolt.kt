@@ -18,7 +18,7 @@ abstract class Neo4jResourceBolt<T> : LazyBasicBolt<T>(), Connectable<Neo4jLoade
         this.loader = loader
     }
 
-    override fun prepare(topoConf: MutableMap<String, Any>?, context: TopologyContext?) {
+    override fun prepare(stormConf: MutableMap<Any?, Any?>?, context: TopologyContext?) {
         driver = Neo4jManager.getConnector(loader)
     }
 

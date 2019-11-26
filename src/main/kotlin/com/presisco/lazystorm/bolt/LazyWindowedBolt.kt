@@ -63,8 +63,8 @@ abstract class LazyWindowedBolt<T>(
     @Transient
     protected lateinit var collector: OutputCollector
 
-    override fun prepare(topoConf: Map<String, *>, context: TopologyContext, collector: OutputCollector) {
-        super.prepare(topoConf, context, collector)
+    override fun prepare(stormConf: MutableMap<Any?, Any?>?, context: TopologyContext?, collector: OutputCollector) {
+        super.prepare(stormConf, context, collector)
         this.collector = collector
     }
 
