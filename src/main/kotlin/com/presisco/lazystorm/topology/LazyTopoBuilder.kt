@@ -264,18 +264,21 @@ class LazyTopoBuilder {
             val itemClass = getString("class")
             val spout = when (itemClass) {
                 "KafkaSpout" -> {
-                    val spoutConfig = KafkaSpoutConfig.Builder<String, String>(
+                    var spoutConfig = KafkaSpoutConfig.Builder<String, String>(
                             getString("brokers"),
                             getString("topic")
                     )
-                            .setProp(ConsumerConfig.GROUP_ID_CONFIG, getString("group.id"))
-                            .setProp(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, getString("request.timeout.ms"))
-                            .setProp(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, getString("fetch.max.wait.ms"))
                             .setProp(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, getString("key.deserializer"))
                             .setProp(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, getString("value.deserializer"))
                             .setProcessingGuarantee(KafkaSpoutConfig.ProcessingGuarantee.AT_LEAST_ONCE)
                     if (config.containsKey("group.id")) {
-                        spoutConfig.setProp("group.id", config.getString("group.id"))
+                        spoutConfig = spoutConfig.setProp("group.id", config.getString("group.id"))
+                    }
+                    if (containsKey("request.timeout.ms")) {
+                        spoutConfig = spoutConfig.setProp(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, getString("request.timeout.ms"))
+                    }
+                    if (containsKey("fetch.max.wait.ms")) {
+                        spoutConfig = spoutConfig.setProp(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, getString("fetch.max.wait.ms"))
                     }
                     KafkaSpout(spoutConfig.build())
                 }
