@@ -263,6 +263,46 @@ class LazyTopoBuilder {
         }
     }
 
+    fun sortBolts(topoConfig: Map<String, Map<String, Any>>): List<String> {
+        // 统计每个Bolt依赖的上游Bolt
+        val dependencyMap = hashMapOf<String, Set<String>>()
+        val resolvedSet = hashSetOf<String>()
+        topoConfig.forEach { name, config ->
+            if (config.getString("type") == "spout") {
+                resolvedSet.add(name)
+                return@forEach
+            }
+            val upstream = config["upstream"] ?: throw IllegalStateException("null upstream for bolt: $name")
+            dependencyMap[name] = when (upstream) {
+                is Map<*, *> -> upstream.keys as Set<String>
+                is List<*> -> upstream.toSet() as Set<String>
+                else -> setOf(upstream as String)
+            }
+        }
+
+        val unresolvedSet = dependencyMap.keys.toHashSet()
+        val compOrder = arrayListOf<String>()
+        while (unresolvedSet.isNotEmpty()) {
+            var nextName = ""
+            for (name in unresolvedSet) {
+                if (name in compOrder) {
+                    continue
+                }
+                if (dependencyMap[name]!!.minus(resolvedSet).isEmpty()) {
+                    nextName = name
+                    break
+                }
+            }
+            if (nextName.isEmpty()) {
+                throw IllegalStateException("no satisfied upstream for bolts: $unresolvedSet")
+            }
+            compOrder.add(nextName)
+            resolvedSet.add(nextName)
+            unresolvedSet.remove(nextName)
+        }
+        return compOrder
+    }
+
     fun IComponent.scanOutputStreamNames(): Set<String> {
         val scanner = OutputScanner()
         this.declareOutputFields(scanner)
@@ -285,6 +325,7 @@ class LazyTopoBuilder {
         val builder = TopologyBuilder()
         with(builder) {
             val bolts = hashMapOf<String, IComponent>()
+            val spouts = hashMapOf<String, IRichSpout>()
             topoConfig.forEach { name, config ->
                 with(config) {
                     when (config["type"] ?: error("undefined type for $name")) {
@@ -299,6 +340,7 @@ class LazyTopoBuilder {
                                     spout,
                                     getInt("parallelism")
                             )
+                            spouts[name] = spout
                         }
                         "bolt" -> {
                             val bolt = try {
@@ -314,49 +356,8 @@ class LazyTopoBuilder {
                 }
             }
 
-            // 统计每个Bolt依赖的上游Bolt
-            val dependencyMap = hashMapOf<String, Collection<String>>()
-            bolts.forEach { name, bolt ->
-                val config = topoConfig[name] ?: error("mismatch bolt instances and topo config entries!")
-                val upstream = config["upstream"] ?: throw IllegalStateException("null upstream for bolt: $name")
-                dependencyMap[name] = when (upstream) {
-                    is Map<*, *> -> upstream.keys as Set<String>
-                    is List<*> -> upstream as List<String>
-                    else -> setOf(upstream as String)
-                }
-            }
-
             // 根据依赖先后关系生成Bolt遍历顺序
-            val boltOrder = LinkedList<String>()
-            bolts.forEach { name, bolt ->
-                var after = -1
-                dependencyMap[name]!!.forEach {
-                    val index = boltOrder.indexOf(it)
-                    if (index > after) {
-                        after = index
-                    }
-                }
-                var before = bolts.size
-                dependencyMap.forEach { downStream, dependencies ->
-                    if (dependencies.contains(downStream)) {
-                        val index = boltOrder.indexOf(downStream)
-                        if (index > -1 && index < before) {
-                            before = index
-                        }
-                    }
-                }
-
-                if (after == -1) {
-                    boltOrder.addFirst(name)
-                } else if (before == bolts.size) {
-                    boltOrder.add(after, name)
-                } else if (after > before) {
-                    throw IllegalStateException("bad bolt dependency order at $name!")
-                } else {
-                    boltOrder.add(before, name)
-                }
-
-            }
+            val boltOrder = sortBolts(topoConfig)
 
             // 生成bolt分组关系
             boltOrder.forEach { name ->
@@ -406,15 +407,19 @@ class LazyTopoBuilder {
                              * 在keep_stream模式下为所有上游bolt的所有custom输出或custom为空时的所有输出
                              * 非keep_stream模式下与Storm中不指定stream id的group策略一致
                              */
-                            is Collection<*> -> upstream.forEach { boltName ->
-                                validateUpstreamName(boltName as String)
-                                val upstreamBolt = bolts[boltName]!!
+                            is Collection<*> -> upstream.forEach { upstreamName ->
+                                validateUpstreamName(upstreamName as String)
+                                val upstreamComponent = if (bolts.containsKey(upstreamName)) {
+                                    bolts[upstreamName]!!
+                                } else {
+                                    spouts[upstreamName]!!
+                                }
                                 if (keepStream) {
-                                    var streams = keepStreamScanner(upstreamBolt)
-                                    streams.forEach { setGrouping(declarer, grouping, boltName, it, groupingParams) }
+                                    var streams = keepStreamScanner(upstreamComponent)
+                                    streams.forEach { setGrouping(declarer, grouping, upstreamName, it, groupingParams) }
                                     inputStreams.addAll(streams)
                                 } else {
-                                    setGrouping(declarer, grouping, boltName, groupingParams)
+                                    setGrouping(declarer, grouping, upstreamName, groupingParams)
                                     inputStreams.add(Utils.DEFAULT_STREAM_ID)
                                 }
                             }
@@ -423,15 +428,19 @@ class LazyTopoBuilder {
                              * 非keep_stream模式下与Storm中不指定stream id的group策略一致
                              */
                             else -> {
-                                val upstreamBoltName = upstream as String
-                                validateUpstreamName(upstreamBoltName)
+                                val upstreamName = upstream as String
+                                validateUpstreamName(upstreamName)
+                                val upstreamComponent = if (bolts.containsKey(upstreamName)) {
+                                    bolts[upstreamName]!!
+                                } else {
+                                    spouts[upstreamName]!!
+                                }
                                 if (keepStream) {
-                                    val upstreamBolt = bolts[upstreamBoltName]!!
-                                    val streams = keepStreamScanner(upstreamBolt)
-                                    streams.forEach { setGrouping(declarer, grouping, upstreamBoltName, it, groupingParams) }
+                                    val streams = keepStreamScanner(upstreamComponent)
+                                    streams.forEach { setGrouping(declarer, grouping, upstreamName, it, groupingParams) }
                                     inputStreams.addAll(streams)
                                 } else {
-                                    setGrouping(declarer, grouping, upstream, groupingParams)
+                                    setGrouping(declarer, grouping, upstreamName, groupingParams)
                                     inputStreams.add(Utils.DEFAULT_STREAM_ID)
                                 }
                             }
