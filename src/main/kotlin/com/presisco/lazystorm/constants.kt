@@ -1,10 +1,11 @@
 package com.presisco.lazystorm
 
+import org.apache.storm.utils.Utils
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-const val DATA_STREAM_NAME = "default"
+const val DATA_STREAM_NAME = Utils.DEFAULT_STREAM_ID
 const val DATA_FIELD_NAME = "data"
 const val DATA_FIELD_POS = 0
 

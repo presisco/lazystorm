@@ -23,6 +23,8 @@ abstract class LazyWindowedBolt<T>(
         customDataStreams.addAll(streams)
     }
 
+    override fun getCustomStreams() = customDataStreams
+
     fun setSrcPos(pos: Int): LazyWindowedBolt<T> {
         srcPos = pos
         return this
