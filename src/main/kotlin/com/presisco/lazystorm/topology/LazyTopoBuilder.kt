@@ -29,11 +29,10 @@ import org.apache.storm.kafka.spout.KafkaSpoutConfig
 import org.apache.storm.topology.*
 import org.apache.storm.topology.base.BaseWindowedBolt
 import org.apache.storm.tuple.Fields
+import org.apache.storm.utils.Utils
 import java.util.*
-import kotlin.collections.HashMap
 
 class LazyTopoBuilder {
-    private val streamDefs = HashMap<String, ArrayList<String>>()
 
     private fun setGrouping(
             declarer: BoltDeclarer,
@@ -299,28 +298,6 @@ class LazyTopoBuilder {
         }
     }
 
-    fun scanStreams(topoConfig: Map<String, Map<String, Any>>) {
-        val unsolvedSet = hashSetOf<String>()
-        unsolvedSet.addAll(topoConfig.filterValues { it.getString("type") == "bolt" }.keys)
-        val defined = unsolvedSet.filter { topoConfig[it]!!.containsKey("streams") }
-        defined.forEach { streamDefs[it] = topoConfig[it]!!.getArrayList("streams") }
-        unsolvedSet.removeAll(defined)
-
-        while (unsolvedSet.isNotEmpty()) {
-            val solvable = unsolvedSet.filter {
-                topoConfig[it]!!.containsKey("keep_stream")
-                        && topoConfig[it]!!.getBoolean("keep_stream")
-                        && streamDefs.containsKey(topoConfig[it]!!.getString("upstream"))
-            }
-
-            if (solvable.isEmpty())
-                break
-
-            solvable.forEach { streamDefs[it] = streamDefs[topoConfig[it]!!.getString("upstream")]!! }
-            unsolvedSet.removeAll(solvable)
-        }
-    }
-
     fun declareBolt(builder: TopologyBuilder, bolt: Any, name: String, parallelism: Int) = with(builder) {
         when (bolt) {
             is IBasicBolt -> setBolt(name, bolt, parallelism)
@@ -332,25 +309,23 @@ class LazyTopoBuilder {
         }
     }
 
+    fun IComponent.scanOutputStreamNames(): Set<String> {
+        val scanner = OutputScanner()
+        this.declareOutputFields(scanner)
+        return scanner.streams.keys
+    }
+
     fun buildTopology(
             topoConfig: Map<String, Map<String, Any>>,
             createSpout: (name: String, config: Map<String, Any>) -> IRichSpout,
             createBolt: (name: String, config: Map<String, Any>) -> IComponent
     ): StormTopology {
-        scanStreams(topoConfig)
-
         val builder = TopologyBuilder()
         with(builder) {
+            val bolts = hashMapOf<String, IComponent>()
             topoConfig.forEach { name, config ->
                 with(config) {
-                    val type = getString("type")
-
-                    val validateUpstreamName = fun(upstreamName: String) {
-                        if (!topoConfig.containsKey(upstreamName))
-                            throw IllegalStateException("undefined upstream: $upstreamName for bolt: $name")
-                    }
-
-                    when (type) {
+                    when (getString("type")) {
                         "spout" -> {
                             val spout: IRichSpout = try {
                                 createLazySpout(name, config, createSpout)
@@ -369,64 +344,139 @@ class LazyTopoBuilder {
                             } catch (e: IllegalStateException) {
                                 throw IllegalStateException("config for bolt: $name is wrong, ${e.message}")
                             }
-                            val declarer = declareBolt(builder, bolt, name, config.getInt("parallelism"))
 
-                            val upstream = config["upstream"]
-                                    ?: throw IllegalStateException("null upstream for bolt: $name")
-                            val grouping = if (config.containsKey("grouping")) config.getString("grouping") else "shuffle"
+                            bolts[name] = bolt
+                        }
+                        else -> throw IllegalStateException("unsupported type: ${getString("type")}")
+                    }
+                }
+            }
 
-                            val groupingParams = if (config.containsKey("group_params"))
-                                getList<String>("group_params")
-                            else
-                                listOf()
+            // 统计每个Bolt依赖的上游Bolt
+            val dependencyMap = hashMapOf<String, Collection<String>>()
+            bolts.forEach { name, bolt ->
+                val config = topoConfig[name] ?: error("mismatch bolt instances and topo config entries!")
+                val upstream = config["upstream"] ?: throw IllegalStateException("null upstream for bolt: $name")
+                dependencyMap[name] = when (upstream) {
+                    is Map<*, *> -> upstream.keys as Set<String>
+                    is List<*> -> upstream as List<String>
+                    else -> setOf(upstream as String)
+                }
+            }
 
-                            if (bolt is FlexStreams) {
-                                if (containsKey("streams")) {
-                                    bolt.addStreams(getArrayList("streams"))
-                                } else if (containsKey("keep_stream")
-                                        && getBoolean("keep_stream")
-                                ) {
-                                    if (upstream !is String) {
-                                        throw IllegalStateException("upstream mode for $name does not support keep_stream option")
+            // 根据依赖先后关系生成Bolt遍历顺序
+            val boltOrder = LinkedList<String>()
+            bolts.forEach { name, bolt ->
+                var after = -1
+                dependencyMap[name]!!.forEach {
+                    val index = boltOrder.indexOf(it)
+                    if (index > after) {
+                        after = index
+                    }
+                }
+                var before = bolts.size
+                dependencyMap.forEach { downStream, dependencies ->
+                    if (dependencies.contains(downStream)) {
+                        val index = boltOrder.indexOf(downStream)
+                        if (index > -1 && index < before) {
+                            before = index
+                        }
+                    }
+                }
+
+                if (after == -1) {
+                    boltOrder.addFirst(name)
+                } else if (after > before) {
+                    throw IllegalStateException("bad bolt dependency order at $name!")
+                } else {
+                    boltOrder.add(before, name)
+                }
+
+            }
+
+            // 生成bolt分组关系
+            boltOrder.forEach { name ->
+                val bolt = bolts[name]!!
+                val config = topoConfig[name] ?: error("mismatch bolt instances and topo config entries!")
+                with(config) {
+                    val declarer = declareBolt(builder, bolt, name, getInt("parallelism"))
+
+                    val validateUpstreamName = fun(upstreamName: String) {
+                        if (containsKey(upstreamName))
+                            throw IllegalStateException("undefined upstream: $upstreamName for bolt: $name")
+                    }
+
+                    val upstream = config["upstream"]!!
+                    val grouping = if (containsKey("grouping")) getString("grouping") else "shuffle"
+
+                    val groupingParams = if (containsKey("group_params"))
+                        getList<String>("group_params")
+                    else
+                        listOf()
+
+                    val keepStream = if (bolt is FlexStreams && containsKey("keep_stream") && getBoolean("keep_stream")) {
+                        if (upstream is Collection<*>) {
+                            throw IllegalStateException("list upstream def for $name does not support keep_stream option")
+                        }
+                        true
+                    } else {
+                        false
+                    }
+
+                    try {
+                        val inputStreams = hashSetOf<String>()
+                        when (upstream) {
+                            is Map<*, *> -> upstream.forEach { (boltName, streamDef) ->
+                                validateUpstreamName(boltName as String)
+                                val upstreams: Collection<String> = if (streamDef is String) {
+                                    listOf(streamDef)
+                                } else {
+                                    streamDef as Collection<String>
+                                }
+                                upstreams.forEach { stream ->
+                                    setGrouping(declarer, grouping, boltName, stream, groupingParams)
+                                }
+                                inputStreams.addAll(upstreams)
+                            }
+                            is Collection<*> -> upstream.forEach { boltName ->
+                                validateUpstreamName(boltName as String)
+                                val upstreamBolt = bolts[boltName]!!
+                                if (keepStream) {
+                                    val streams = if (upstreamBolt is FlexStreams) {
+                                        upstreamBolt.getCustomStreams()
+                                    } else {
+                                        upstreamBolt.scanOutputStreamNames()
                                     }
-                                    streamDefs[name]
-                                            ?: throw IllegalStateException("upstream $upstream for $name does not define output streams")
-                                    bolt.addStreams(streamDefs[name]!!)
+                                    streams.forEach { setGrouping(declarer, grouping, boltName, it, groupingParams) }
+                                    inputStreams.addAll(streams)
+                                } else {
+                                    setGrouping(declarer, grouping, boltName, groupingParams)
+                                    inputStreams.add(Utils.DEFAULT_STREAM_ID)
                                 }
                             }
-
-                            try {
-                                when (upstream) {
-                                    is Map<*, *> -> upstream.forEach { (boltName, streamName) ->
-                                        validateUpstreamName(boltName as String)
-                                        when (streamName) {
-                                            is List<*> -> streamName.forEach { stream ->
-                                                setGrouping(declarer, grouping, boltName, stream as String, groupingParams)
-                                            }
-                                            else -> setGrouping(declarer, grouping, boltName, streamName as String, groupingParams)
-                                        }
+                            else -> {
+                                val upstreamBoltName = upstream as String
+                                validateUpstreamName(upstreamBoltName)
+                                if (keepStream) {
+                                    val upstreamBolt = bolts[upstreamBoltName]!!
+                                    val streams = if (upstreamBolt is FlexStreams) {
+                                        upstreamBolt.getCustomStreams()
+                                    } else {
+                                        upstreamBolt.scanOutputStreamNames()
                                     }
-                                    is Collection<*> -> upstream.forEach {
-                                        validateUpstreamName(it as String)
-                                        setGrouping(declarer, grouping, it, groupingParams)
-                                    }
-                                    else -> {
-                                        upstream as String
-                                        validateUpstreamName(upstream)
-                                        if (bolt is LazyBasicBolt<*> && streamDefs.containsKey(upstream)) {
-                                            streamDefs[upstream]!!.forEach {
-                                                setGrouping(declarer, grouping, upstream, it, groupingParams)
-                                            }
-                                        } else {
-                                            setGrouping(declarer, grouping, upstream, groupingParams)
-                                        }
-                                    }
+                                    streams.forEach { setGrouping(declarer, grouping, upstreamBoltName, it, groupingParams) }
+                                    inputStreams.addAll(streams)
+                                } else {
+                                    setGrouping(declarer, grouping, upstream, groupingParams)
+                                    inputStreams.add(Utils.DEFAULT_STREAM_ID)
                                 }
-                            } catch (e: ClassCastException) {
-                                throw Exception("bad upstream definition for bolt: $name! upstream in config: $upstream, supported types: String, List<String>, Map<String, String>, Map<String, List<String>>")
                             }
                         }
-                        else -> throw IllegalStateException("unsupported type: $type")
+                        if (keepStream) {
+                            (bolt as FlexStreams).addStreams(inputStreams.toList())
+                        }
+                    } catch (e: ClassCastException) {
+                        throw Exception("bad upstream definition for bolt: $name! upstream in config: $upstream, supported types: String, List<String>, Map<String, String>, Map<String, List<String>>")
                     }
                 }
             }

@@ -4,4 +4,6 @@ interface FlexStreams {
 
     fun addStreams(streams: List<String>)
 
+    fun getCustomStreams(): List<String>
+
 }
