@@ -1,6 +1,7 @@
 package com.presisco.lazystorm.bolt.jdbc
 
 import com.presisco.lazyjdbc.client.BaseJdbcClient
+import com.presisco.lazystorm.getBoolean
 import com.presisco.lazystorm.nowTimeString
 import org.apache.storm.task.TopologyContext
 import org.apache.storm.topology.BasicOutputCollector
@@ -23,6 +24,11 @@ abstract class JdbcClientBolt<CLIENT> : BaseJdbcBolt<Any>() {
     fun setEmitOnException(flag: Boolean): JdbcClientBolt<CLIENT> {
         emitOnException = flag
         return this
+    }
+
+    override fun configure(config: Map<String, *>) {
+        super.configure(config)
+        setEmitOnException(config.getBoolean("emit_on_failure"))
     }
 
     override fun prepare(stormConf: MutableMap<Any?, Any?>?, context: TopologyContext?) {

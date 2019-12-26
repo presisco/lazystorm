@@ -3,12 +3,17 @@ package com.presisco.lazystorm.bolt.jdbc
 import com.presisco.lazystorm.bolt.LazyBasicBolt
 import com.presisco.lazystorm.connector.DataSourceLoader
 import com.presisco.lazystorm.connector.DataSourceManager
+import com.presisco.lazystorm.getBoolean
+import com.presisco.lazystorm.getHashMap
+import com.presisco.lazystorm.getInt
+import com.presisco.lazystorm.getString
+import com.presisco.lazystorm.lifecycle.Configurable
 import com.presisco.lazystorm.lifecycle.Connectable
 import org.apache.storm.task.TopologyContext
 import org.slf4j.LoggerFactory
 import javax.sql.DataSource
 
-abstract class BaseJdbcBolt<T> : LazyBasicBolt<T>(), Connectable<DataSourceLoader> {
+abstract class BaseJdbcBolt<T> : LazyBasicBolt<T>(), Connectable<DataSourceLoader>, Configurable {
     private val logger = LoggerFactory.getLogger(BaseJdbcBolt::class.java)
 
     @Transient
@@ -48,6 +53,25 @@ abstract class BaseJdbcBolt<T> : LazyBasicBolt<T>(), Connectable<DataSourceLoade
     fun setRollbackOnFailure(flag: Boolean): BaseJdbcBolt<T> {
         rollbackOnBatchFailure = flag
         return this
+    }
+
+    override fun configure(config: Map<String, *>) {
+        with(config) {
+            setQueryTimeout(getInt("timeout"))
+                    .setRollbackOnFailure(getBoolean("rollback"))
+
+            val keyword = if (this@BaseJdbcBolt is OracleSeqTagBolt) {
+                "sequence"
+            } else {
+                "table"
+            }
+
+            if (containsKey("stream_${keyword}_map")) {
+                setStreamTableMap(getHashMap("stream_${keyword}_map") as java.util.HashMap<String, String>)
+            } else {
+                setTableName(getString(keyword))
+            }
+        }
     }
 
     private fun initializeHikariCP() {

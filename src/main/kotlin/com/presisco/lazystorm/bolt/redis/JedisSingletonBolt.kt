@@ -3,6 +3,9 @@ package com.presisco.lazystorm.bolt.redis
 import com.presisco.lazystorm.bolt.LazyBasicBolt
 import com.presisco.lazystorm.connector.JedisPoolLoader
 import com.presisco.lazystorm.connector.JedisPoolManager
+import com.presisco.lazystorm.getHashMap
+import com.presisco.lazystorm.getString
+import com.presisco.lazystorm.lifecycle.Configurable
 import com.presisco.lazystorm.lifecycle.Connectable
 import org.apache.storm.task.TopologyContext
 import org.slf4j.LoggerFactory
@@ -11,7 +14,7 @@ import redis.clients.jedis.JedisPool
 import java.io.Closeable
 import java.io.IOException
 
-abstract class JedisSingletonBolt<T> : LazyBasicBolt<T>(), Connectable<JedisPoolLoader> {
+abstract class JedisSingletonBolt<T> : LazyBasicBolt<T>(), Connectable<JedisPoolLoader>, Configurable {
     private val logger = LoggerFactory.getLogger(JedisSingletonBolt::class.java)
 
     protected lateinit var jedisPoolLoader: JedisPoolLoader
@@ -39,6 +42,17 @@ abstract class JedisSingletonBolt<T> : LazyBasicBolt<T>(), Connectable<JedisPool
         streamKeyMap[stream]
     } else {
         keyName
+    }
+
+    override fun configure(config: Map<String, *>) {
+        with(config) {
+            if (containsKey("stream_key_map")) {
+                setStreamKeyMap(getHashMap("stream_key_map") as java.util.HashMap<String, String>)
+            }
+            if (containsKey("key")) {
+                setDataKey(getString("key"))
+            }
+        }
     }
 
     override fun prepare(stormConf: MutableMap<Any?, Any?>?, context: TopologyContext?) {
