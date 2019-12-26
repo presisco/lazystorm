@@ -2,7 +2,10 @@ package com.presisco.lazystorm.topology
 
 import com.presisco.lazystorm.*
 import com.presisco.lazystorm.bolt.*
-import com.presisco.lazystorm.bolt.jdbc.*
+import com.presisco.lazystorm.bolt.jdbc.OracleSeqTagBolt
+import com.presisco.lazystorm.bolt.jdbc.SimpleInsertBolt
+import com.presisco.lazystorm.bolt.jdbc.SimpleReplaceBolt
+import com.presisco.lazystorm.bolt.jdbc.StreamFieldDirectInsertBolt
 import com.presisco.lazystorm.bolt.json.FormattedJson2ListBolt
 import com.presisco.lazystorm.bolt.json.FormattedJson2MapBolt
 import com.presisco.lazystorm.bolt.json.Json2ListBolt
@@ -11,7 +14,6 @@ import com.presisco.lazystorm.bolt.kafka.KafkaKeySwitchBolt
 import com.presisco.lazystorm.bolt.kafka.LazyJsonMapper
 import com.presisco.lazystorm.bolt.redis.JedisMapListToHashBolt
 import com.presisco.lazystorm.bolt.redis.JedisMapToHashBolt
-import com.presisco.lazystorm.bolt.redis.JedisSingletonBolt
 import com.presisco.lazystorm.connector.DataSourceLoader
 import com.presisco.lazystorm.connector.JedisPoolLoader
 import com.presisco.lazystorm.connector.LoaderManager
@@ -133,35 +135,6 @@ class LazyTopoBuilder {
             if (containsKey("neo4j")) {
                 (connectable as Connectable<Neo4jLoader>).connect(LoaderManager.getLoader("neo4j", getString("neo4j")))
             }
-            when (bolt) {
-                is BaseJdbcBolt<*> -> {
-                    bolt.setQueryTimeout(getInt("timeout"))
-                            .setRollbackOnFailure(getBoolean("rollback"))
-                    if (bolt is JdbcClientBolt<*>) {
-                        bolt.setEmitOnException(getBoolean("emit_on_failure"))
-                    }
-                    val keyword = if (bolt is OracleSeqTagBolt) {
-                        "sequence"
-                    } else {
-                        "table"
-                    }
-
-                    if (containsKey("stream_${keyword}_map")) {
-                        bolt.setStreamTableMap(getHashMap("stream_${keyword}_map") as HashMap<String, String>)
-                    } else if (containsKey(keyword)) {
-                        bolt.setTableName(getString(keyword))
-                    }
-                }
-                is JedisSingletonBolt<*> -> {
-                    if (containsKey("stream_key_map")) {
-                        bolt.setStreamKeyMap(getHashMap("stream_key_map") as HashMap<String, String>)
-                    }
-                    if (containsKey("key")) {
-                        bolt.setDataKey(getString("key"))
-                    }
-                }
-            }
-            return
         }
     }
 
@@ -173,39 +146,20 @@ class LazyTopoBuilder {
 
             val bolt = when (itemClass) {
                 /*             Edit              */
-                "MapRenameBolt" -> MapRenameBolt(getHashMap("rename") as HashMap<String, String>)
-                "MapStripBolt" -> MapStripBolt(getArrayList("strip"))
+                "MapRenameBolt" -> MapRenameBolt()
+                "MapStripBolt" -> MapStripBolt()
                 /*             Json              */
                 "Json2MapBolt" -> Json2MapBolt()
                 "Json2ListBolt" -> Json2ListBolt()
-                "FormattedJson2MapBolt" -> {
-                    val formatDefRaw = config["format"] as Map<String, Collection<String>>
-                    val converted = formatDefRaw.mapValueToHashMap { collectionToArrayList(it) }
-                    FormattedJson2MapBolt(converted)
-                }
-                "FormattedJson2ListBolt" -> {
-                    val formatDefRaw = config["format"] as Map<String, Collection<String>>
-                    val converted = formatDefRaw.mapValueToHashMap { collectionToArrayList(it) }
-                    FormattedJson2ListBolt(converted)
-                }
+                "FormattedJson2MapBolt" -> FormattedJson2MapBolt()
+                "FormattedJson2ListBolt" -> FormattedJson2ListBolt()
                 /*             Kafka             */
                 "KafkaKeySwitchBolt" -> {
                     val keyType = getString("key_type")
-                    val valueType = getString("value_type")
-                    if (valueType !in setOf("string")) {
-                        throw IllegalStateException("unsupported value type: $valueType")
-                    }
-                    val keyStreamMap = getMap<String, String>("key_stream_map")
-                    val converted = when (keyType) {
-                        "int" -> keyStreamMap.mapKeyToHashMap { Integer.parseInt(it) }
-                        "short" -> keyStreamMap.mapKeyToHashMap { Integer.parseInt(it).toShort() }
-                        "string" -> keyStreamMap.mapKeyToHashMap { it }
-                        else -> throw IllegalStateException("unsupported key type: $keyType")
-                    }
                     when (keyType) {
-                        "int" -> object : KafkaKeySwitchBolt<Int, String>(converted as HashMap<Int, String>) {}
-                        "short" -> object : KafkaKeySwitchBolt<Short, String>(converted as HashMap<Short, String>) {}
-                        "string" -> object : KafkaKeySwitchBolt<String, String>(converted as HashMap<String, String>) {}
+                        "int" -> object : KafkaKeySwitchBolt<Int, String>() {}
+                        "short" -> object : KafkaKeySwitchBolt<Short, String>() {}
+                        "string" -> object : KafkaKeySwitchBolt<String, String>() {}
                         else -> throw IllegalStateException("unsupported key type: $keyType")
                     }
                 }
@@ -224,10 +178,10 @@ class LazyTopoBuilder {
                 /*             JDBC              */
                 "SimpleInsertBolt", "MapInsertJdbcBolt" -> SimpleInsertBolt()
                 "SimpleReplaceBolt", "MapReplaceJdbcBolt" -> SimpleReplaceBolt()
-                "OracleSeqTagBolt" -> OracleSeqTagBolt(getString("tag"))
-                "StreamFieldDirectInsertBolt" -> StreamFieldDirectInsertBolt(getString("field"))
+                "OracleSeqTagBolt" -> OracleSeqTagBolt()
+                "StreamFieldDirectInsertBolt" -> StreamFieldDirectInsertBolt()
                 /*         Redis        */
-                "JedisMapListToHashBolt" -> JedisMapListToHashBolt(getString("key_field"))
+                "JedisMapListToHashBolt" -> JedisMapListToHashBolt()
                 "JedisMapToHashBolt" -> JedisMapToHashBolt()
                 /*         Debug        */
                 "TupleConsoleDumpBolt" -> TupleConsoleDumpBolt()

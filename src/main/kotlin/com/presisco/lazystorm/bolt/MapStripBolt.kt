@@ -1,11 +1,16 @@
 package com.presisco.lazystorm.bolt
 
+import com.presisco.lazystorm.getArrayList
+import com.presisco.lazystorm.lifecycle.Configurable
 import org.slf4j.LoggerFactory
 
-class MapStripBolt(
-        private val stripList: ArrayList<String>
-) : MapOpBolt() {
-    private val logger = LoggerFactory.getLogger(MapRenameBolt::class.java)
+class MapStripBolt : MapOpBolt(), Configurable {
+    private val logger = LoggerFactory.getLogger(MapStripBolt::class.java)
+    private lateinit var stripList: ArrayList<String>
+
+    override fun configure(config: Map<String, *>) {
+        stripList = config.getArrayList("strip")
+    }
 
     override fun operate(input: Map<String, *>): HashMap<String, *> {
         val output = hashMapOf<String, Any?>()
