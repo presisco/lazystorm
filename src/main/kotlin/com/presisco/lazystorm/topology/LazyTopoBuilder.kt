@@ -271,6 +271,14 @@ class LazyTopoBuilder {
         return scanner.streams.keys
     }
 
+    fun keepStreamScanner(bolt: IComponent): Collection<String> {
+        return if (bolt is FlexStreams && bolt.getCustomStreams().isNotEmpty()) {
+            bolt.getCustomStreams()
+        } else {
+            bolt.scanOutputStreamNames()
+        }
+    }
+
     fun buildTopology(
             topoConfig: Map<String, Map<String, Any>>,
             createSpout: (name: String, config: Map<String, Any>) -> IRichSpout,
@@ -281,7 +289,7 @@ class LazyTopoBuilder {
             val bolts = hashMapOf<String, IComponent>()
             topoConfig.forEach { name, config ->
                 with(config) {
-                    when (getString("type")) {
+                    when (config["type"] ?: error("undefined type for $name")) {
                         "spout" -> {
                             val spout: IRichSpout = try {
                                 createLazySpout(name, config, createSpout)
@@ -342,6 +350,8 @@ class LazyTopoBuilder {
 
                 if (after == -1) {
                     boltOrder.addFirst(name)
+                } else if (before == bolts.size) {
+                    boltOrder.add(after, name)
                 } else if (after > before) {
                     throw IllegalStateException("bad bolt dependency order at $name!")
                 } else {
@@ -394,15 +404,15 @@ class LazyTopoBuilder {
                                 }
                                 inputStreams.addAll(upstreams)
                             }
+                            /**
+                             * 在keep_stream模式下为所有上游bolt的所有custom输出或custom为空时的所有输出
+                             * 非keep_stream模式下与Storm中不指定stream id的group策略一致
+                             */
                             is Collection<*> -> upstream.forEach { boltName ->
                                 validateUpstreamName(boltName as String)
                                 val upstreamBolt = bolts[boltName]!!
                                 if (keepStream) {
-                                    val streams = if (upstreamBolt is FlexStreams) {
-                                        upstreamBolt.getCustomStreams()
-                                    } else {
-                                        upstreamBolt.scanOutputStreamNames()
-                                    }
+                                    var streams = keepStreamScanner(upstreamBolt)
                                     streams.forEach { setGrouping(declarer, grouping, boltName, it, groupingParams) }
                                     inputStreams.addAll(streams)
                                 } else {
@@ -410,16 +420,16 @@ class LazyTopoBuilder {
                                     inputStreams.add(Utils.DEFAULT_STREAM_ID)
                                 }
                             }
+                            /**
+                             * 在keep_stream模式下为上游bolt的所有custom输出或custom为空时的所有输出
+                             * 非keep_stream模式下与Storm中不指定stream id的group策略一致
+                             */
                             else -> {
                                 val upstreamBoltName = upstream as String
                                 validateUpstreamName(upstreamBoltName)
                                 if (keepStream) {
                                     val upstreamBolt = bolts[upstreamBoltName]!!
-                                    val streams = if (upstreamBolt is FlexStreams) {
-                                        upstreamBolt.getCustomStreams()
-                                    } else {
-                                        upstreamBolt.scanOutputStreamNames()
-                                    }
+                                    val streams = keepStreamScanner(upstreamBolt)
                                     streams.forEach { setGrouping(declarer, grouping, upstreamBoltName, it, groupingParams) }
                                     inputStreams.addAll(streams)
                                 } else {
