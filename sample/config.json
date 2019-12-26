@@ -42,6 +42,7 @@
       "class": "KafkaSpout",
       "brokers": "localhost:9092",
       "topic": "lazy_topic",
+      "group.id": "lazystorm-debug",
       "key.deserializer": "org.apache.kafka.common.serialization.IntegerDeserializer",
       "value.deserializer": "org.apache.kafka.common.serialization.StringDeserializer",
       "parallelism": 1
@@ -236,12 +237,14 @@
       "parallelism": 1
     },
     "neo4j_create_node_bolt": {
+      "type": "bolt",
       "class": "com.presisco.lazystorm.bolt.neo4j.Neo4jCreateNodeBolt",
       "upstream": "json_2_map_bolt",
       "neo4j": "singleton",
       "parallelism": 1
     },
     "neo4j_create_relation_bolt": {
+      "type": "bolt",
       "class": "com.presisco.lazystorm.bolt.neo4j.Neo4jCreateRelationBolt",
       "upstream": "json_2_map_bolt",
       "neo4j": "singleton",

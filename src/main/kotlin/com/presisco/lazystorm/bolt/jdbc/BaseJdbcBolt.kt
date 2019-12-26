@@ -60,6 +60,7 @@ abstract class BaseJdbcBolt<T> : LazyBasicBolt<T>(), Connectable<DataSourceLoade
             setQueryTimeout(getInt("timeout"))
                     .setRollbackOnFailure(getBoolean("rollback"))
 
+            //TODO 很恶劣的代码模式，需要修正
             val keyword = if (this@BaseJdbcBolt is OracleSeqTagBolt) {
                 "sequence"
             } else {
