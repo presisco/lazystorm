@@ -2,11 +2,16 @@ package com.presisco.lazystorm.bolt.jdbc
 
 import com.presisco.lazyjdbc.client.MapJdbcClient
 import com.presisco.lazystorm.addFieldToNewMap
+import com.presisco.lazystorm.getString
 import org.apache.storm.topology.BasicOutputCollector
 
-class StreamFieldDirectInsertBolt(
-        private val streamField: String
-): MapJdbcClientBolt() {
+class StreamFieldDirectInsertBolt : MapJdbcClientBolt() {
+    private lateinit var streamField: String
+
+    override fun configure(config: Map<String, *>) {
+        super.configure(config)
+        streamField = config.getString("field")
+    }
 
     override fun process(
             boltName: String,

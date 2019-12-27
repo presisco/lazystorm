@@ -23,6 +23,8 @@ abstract class LazyBasicBolt<out T>(
         customDataStreams.addAll(streams)
     }
 
+    override fun getCustomStreams() = customDataStreams
+
     fun setSrcPos(pos: Int): LazyBasicBolt<T> {
         srcPos = pos
         return this

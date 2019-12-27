@@ -1,16 +1,23 @@
 package com.presisco.lazystorm.bolt.redis
 
 import com.presisco.gsonhelper.MapHelper
+import com.presisco.lazystorm.getString
 import org.apache.storm.task.TopologyContext
 import org.apache.storm.topology.BasicOutputCollector
 import org.apache.storm.tuple.Tuple
 import org.slf4j.LoggerFactory
 
-class JedisMapListToHashBolt(private val keyField: String) : JedisSingletonBolt<HashMap<String, Any?>>() {
+class JedisMapListToHashBolt : JedisSingletonBolt<HashMap<String, Any?>>() {
     private val logger = LoggerFactory.getLogger(JedisMapListToHashBolt::class.java)
+    private lateinit var keyField: String
 
     @Transient
     private lateinit var mapHelper: MapHelper
+
+    override fun configure(config: Map<String, *>) {
+        super.configure(config)
+        keyField = config.getString("key_field")
+    }
 
     override fun prepare(topoConf: MutableMap<String, Any>?, context: TopologyContext?) {
         super.prepare(topoConf, context)
