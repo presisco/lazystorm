@@ -43,8 +43,8 @@ open class StormBoot(
             throw java.lang.IllegalStateException("bad topology name: $name")
         val conf = Config()
         conf.setFallBackOnJavaSerialization(true)
-        conf.setMaxSpoutPending((config["spout_max_pending"] as Double).toInt())
-        conf.setMessageTimeoutSecs((config["message_timeout_sec"] as Double).toInt())
+        conf.setMaxSpoutPending(config.getInt("spout_max_pending"))
+        conf.setMessageTimeoutSecs(config.getInt("message_timeout_sec"))
 
         conf.setMaxTaskParallelism(1)
 
@@ -64,8 +64,8 @@ open class StormBoot(
         if (!Tools.isValidTopologyName(name))
             throw java.lang.IllegalStateException("bad topology name: $name")
         val conf = Config()
-        conf.setMaxSpoutPending((config["spout_max_pending"] as Double).toInt())
-        conf.setMessageTimeoutSecs((config["message_timeout_sec"] as Double).toInt())
+        conf.setMaxSpoutPending(config.getInt("spout_max_pending"))
+        conf.setMessageTimeoutSecs(config.getInt("message_timeout_sec"))
 
         conf.setNumWorkers((config["workers"] as Double).toInt())
         StormSubmitter.submitTopologyWithProgressBar(name, conf, topology)
