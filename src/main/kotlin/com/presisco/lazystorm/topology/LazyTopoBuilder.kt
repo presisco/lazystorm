@@ -217,16 +217,15 @@ class LazyTopoBuilder {
             val itemClass = getString("class")
             val spout = when (itemClass) {
                 "KafkaSpout" -> {
-                    val spoutConfig = KafkaSpoutConfig.Builder<String, String>(
+                    var spoutConfig = KafkaSpoutConfig.Builder<String, String>(
                             getString("brokers"),
                             getString("topic")
                     )
-                            .setProp(ConsumerConfig.GROUP_ID_CONFIG, getString("group.id"))
                             .setProp(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, getString("key.deserializer"))
                             .setProp(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, getString("value.deserializer"))
                             .setProcessingGuarantee(KafkaSpoutConfig.ProcessingGuarantee.AT_LEAST_ONCE)
                     if (config.containsKey("group.id")) {
-                        spoutConfig.setProp("group.id", config.getString("group.id"))
+                        spoutConfig = spoutConfig.setProp("group.id", config.getString("group.id"))
                     }
                     KafkaSpout(spoutConfig.build())
                 }
